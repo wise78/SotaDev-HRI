@@ -1,0 +1,51 @@
+# ============================================================
+# SotaDev-HRI .gitignore
+# ============================================================
+
+# Compiled Java output
+bin/
+*.class
+
+# Built JARs (rebuild with send.xml)
+runnablejar/
+
+# Python virtual environments
+venv/
+.venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Runtime output directories (created automatically during experiments)
+logs/
+voice/
+videos/
+questionnaires/
+recordings/
+photos/
+
+# Temporary / build logs
+*.log
+*.tmp
+compile_error.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Audio recordings from robot (runtime data, not source)
+# Keep test audio in SotaWhisperTest/audio/ (small, useful for testing)
+SotaWhisperTest/note*.txt
+
+# Whisper server temp files
+/tmp/whisper_input.wav
+
+# Eclipse (keep .project and .classpath — needed for team Eclipse setup)
+# .project
+# .classpath
+# .settings/

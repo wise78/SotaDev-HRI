@@ -1,0 +1,193 @@
+================================================================================
+                    EMBODIED VULNERABILITY STUDY
+                       Post-Interaction Questionnaire
+================================================================================
+
+Participant ID: ________________
+Condition: [  ] CONFIDENT   [  ] UNCERTAIN   [  ] DISTRESSED
+Date: ________________          Time: ________________
+Duration (minutes): ________________
+
+================================================================================
+INSTRUCTIONS:
+Please rate your agreement with each statement using the scale below:
+
+1 = Strongly Disagree
+2 = Disagree
+3 = Somewhat Disagree
+4 = Neutral
+5 = Somewhat Agree
+6 = Agree
+7 = Strongly Agree
+
+================================================================================
+
+SECTION A: TRUST AND SAFETY (5 items)
+
+1. [ ] I felt safe talking with Sota
+   
+2. [ ] Sota seemed trustworthy
+   
+3. [ ] I would trust Sota with personal information
+   
+4. [ ] Sota seemed capable and competent
+   
+5. [ ] I felt Sota understood my concerns
+   
+
+SECTION B: DISCLOSURE AND OPENNESS (5 items)
+
+6. [ ] I shared personal information willingly
+   
+7. [ ] I felt comfortable being honest with Sota
+   
+8. [ ] I would share more sensitive topics in future
+   
+9. [ ] I trust Sota with my feelings
+   
+10. [ ] Sota made me feel heard and understood
+   
+
+SECTION C: EMPATHY AND VULNERABILITY (5 items)
+
+11. [ ] Sota seemed vulnerable or uncertain
+   
+12. [ ] I felt protective or caring toward Sota
+   
+13. [ ] Sota appeared to need support or reassurance
+   
+14. [ ] I wanted to help Sota feel better
+   
+15. [ ] I felt emotionally connected to Sota
+   
+
+SECTION D: PERCEIVED ROBOT CHARACTERISTICS (5 items)
+
+16. [ ] Sota seemed confident in this interaction
+   
+17. [ ] Sota seemed distressed or struggling
+   
+18. [ ] Sota seemed human-like in its responses
+   
+19. [ ] I found Sota's behavior natural and authentic
+   
+20. [ ] Sota's emotions seemed genuine
+   
+
+SECTION E: INTENTION TO CONTINUE (3 items)
+
+21. [ ] I would like to interact with Sota again
+   
+22. [ ] I would recommend Sota to others
+   
+23. [ ] This interaction was valuable/meaningful
+   
+
+================================================================================
+SECTION F: OPEN-ENDED QUESTIONS
+
+24. What did you notice most about Sota's behavior or appearance?
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+25. How would you describe Sota's emotional or mental state during the 
+    interaction?
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+26. Did Sota's behavior make you more or less comfortable sharing personal 
+    information? Why?
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+27. Did you feel any desire to help or support Sota? Please explain.
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+28. Is there anything else you would like to tell us about your experience?
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+================================================================================
+SECTION G: DEMOGRAPHICS (for demographic analysis)
+
+29. Age: ________ years
+
+30. Gender:  [  ] Male   [  ] Female   [  ] Non-binary   [  ] Prefer not to say
+
+31. Prior experience with robots:
+    [  ] None
+    [  ] Several times
+    [  ] Regular use
+    [  ] Expert/professional
+
+32. How familiar are you with AI/robotics concepts?
+    [  ] Not at all   [  ] Somewhat   [  ] Very familiar
+
+33. Have you seen Sota before this study?
+    [  ] Yes   [  ] No
+
+================================================================================
+SECTION H: STUDY NOTES
+
+Observer notes (to be filled by researcher):
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+Behavioral observations (relevant expressions, hesitations, engagement level):
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+
+Any technical issues or anomalies:
+    
+    ________________________________________________________________
+    
+    ________________________________________________________________
+
+================================================================================
+
+THANK YOU FOR PARTICIPATING IN THIS STUDY!
+
+Your feedback and data are invaluable to our research on human-robot 
+interaction and embodied social communication.
+
+If you have any questions about this study, please contact:
+[Researcher Name]: [email]
+[Institution]: [contact information]
+
+================================================================================

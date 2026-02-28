@@ -1,0 +1,7 @@
+Pillow>=9.0.0
+numpy>=1.21.0
+
+# Ethnicity detection via DeepFace (laptop-side analysis)
+# Install with: pip install deepface tf-keras
+deepface>=0.0.80
+tf-keras>=2.16.0

@@ -1,0 +1,299 @@
+<project name="Send" default="send" basedir=".">
+	<basename property="project.name" file="${basedir}"/>
+	
+	<!--dir -->
+	<property name="src.dir" value="src"/>
+	<property name="bin.dir" value="bin"/>
+	<property name="lib.dir" value="lib"/>
+	<property name="runnablejar.dir" value="runnablejar"/>
+	
+	<property name="javadoc.dir" value="docs"/>
+
+	<!--scp -->
+	<property name="scp.pi.user" value="pi"  />
+	<property name="scp.pi.pass" value="raspberry" />	
+	
+	<property name="scp.edison.user" value="root"  />
+	<property name="scp.edison.pass" value="edison00" />
+
+	<!--scp dir -->
+	<property name="scp.senddir_pi" value="/home/pi/" />
+	<property name="scp.senddir_edison" value="/home/root/" />
+
+	<!--runnable classpath -->
+	<property name="runnable.classpath" 
+		value=". /home/vstone/lib/sotalib.jar /home/vstone/lib/SRClientHelper.jar /home/vstone/lib/core-2.2.jar /home/vstone/lib/javase-2.2.jar  /home/vstone/lib/jna-4.1.0.jar /home/vstone/lib/gson-2.6.1.jar /usr/local/share/OpenCV/java/opencv-310.jar"/>
+	
+	<path id="build.lib">
+		<fileset dir="${lib.dir}" includes="*.jar" />
+	</path>
+	
+	<target name="clean">
+		<delete dir="${bin.dir}"/>
+		<echo>delete complete!</echo>
+	</target>
+	
+	<target name="compile" depends="clean">
+		<mkdir dir="${bin.dir}"/>
+		<javac classpathref="build.lib" srcdir="${src.dir}" destdir="${bin.dir}" encoding="utf-8"/>
+	</target>
+	
+	<target name="send" depends="setconf,send_rpi,send_edison">
+	</target>
+
+	<target name="setconf" >
+		<input
+		    message="Select Pratform?"
+		    validargs="Rpi,Edison"
+			defaultvalue="Rpi"
+		    addproperty="pratform.sota"
+		  />
+		<input message="Please enter ip:"
+			defaultvalue="192.168.1."
+		    addproperty="scp.server"/>
+		  <condition property="is.Rpi">
+	        <equals arg1="${pratform.sota}" arg2="Rpi" />
+		  </condition>
+		  <condition property="is.Edison">
+	        <equals arg1="${pratform.sota}" arg2="Edison" />
+		  </condition>
+	</target>
+
+	<target name="send_rpi" if="is.Rpi">
+		<scp todir="${scp.pi.user}:${scp.pi.pass}@${scp.server}:${scp.senddir_pi}/${project.name}" trust="yes" sftp="true" >
+			<fileset dir="../${project.name}"/>
+		</scp>
+	</target>
+
+	<target name="send_edison" if="is.Edison">
+		<scp todir="${scp.edison.user}:${scp.edison.pass}@${scp.server}:${scp.senddir_edison}${project.name}" trust="yes" sftp="true" >
+			<fileset dir="../${project.name}"/>
+		</scp>
+	</target>
+	
+	<target name="send_rpi_file" if="is.Rpi">
+		<scp file="${jar.name}" todir="${scp.pi.user}:${scp.pi.pass}@${scp.server}:${to.path}" trust="yes" sftp="true" />
+	</target>
+
+	<target name="send_edison_file" if="is.Edison">
+		<scp file="${jar.name}" todir="${scp.edison.user}:${scp.edison.pass}@${scp.server}:${to.path}" trust="yes" sftp="true"/>
+	</target>
+	
+	<target name="makeJar" depends="compile">
+		<jar jarfile="${jar.name}" basedir="${bin.dir}">
+			<manifest>
+				<attribute name="Main-Class" value="${jar.class}"/>
+				<attribute name="Class-Path" value="${runnable.classpath}"/>
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="makeJar_and_send">
+		<antcall target="makeJar">
+			<param name="jar.name" value="${jar.name}" />
+			<param name="jar.class" value="${jar.class}" />
+		</antcall>
+		<antcall target="send_rpi_file">
+			<param name="jar.name" value="${jar.name}" />
+			<param name="to.path" value="${to.path}" />
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="${jar.name}" />
+			<param name="to.path" value="${to.path}" />
+		</antcall>
+	</target>
+	
+
+	<target name="jp.vstone.sotatest.ServoSoundTest" depends="setconf">
+		<antcall target="makeJar_and_send">		
+			<param name="jar.class" value="jp.vstone.sotatest.ServoSoundTest" />
+			<param name="jar.name" value="${runnablejar.dir}/servosoundtest.jar" />
+			<param name="to.path" value="/home/vstone/vstonemagic/operation_test" />
+		</antcall>
+	</target>
+	
+	<target name="jp.vstone.commutest.ServoSoundTest" depends="setconf">
+		<antcall target="makeJar_and_send">		
+			<param name="jar.class" value="jp.vstone.commutest.ServoSoundTest" />
+			<param name="jar.name" value="${runnablejar.dir}/servosoundtest_commu.jar" />
+			<param name="to.path" value="/home/vstone/vstonemagic/operation_test" />
+		</antcall>
+	</target>
+
+	<!-- ============================================================ -->
+	<!-- SotaVisionTest — Social Interaction System                    -->
+	<!-- ============================================================ -->
+
+	<property name="visiontest.src" value="SotaVisionTest/src"/>
+	<property name="visiontest.bin" value="SotaVisionTest/bin"/>
+
+	<!-- Compile SotaVisionTest sources -->
+	<target name="compile_visiontest">
+		<mkdir dir="${visiontest.bin}"/>
+		<javac classpathref="build.lib" srcdir="${visiontest.src}" destdir="${visiontest.bin}"
+			encoding="utf-8" source="1.8" target="1.8" includeantruntime="false"/>
+		<echo>SotaVisionTest compiled!</echo>
+	</target>
+
+	<!-- Create JAR for SotaVisionTest -->
+	<target name="makeJar_visiontest" depends="compile_visiontest">
+		<mkdir dir="${runnablejar.dir}"/>
+		<jar jarfile="${runnablejar.dir}/sotavisiontest.jar" basedir="${visiontest.bin}">
+			<manifest>
+				<attribute name="Main-Class" value="jp.vstone.sotavisiontest.MainController"/>
+				<attribute name="Class-Path" value="${runnable.classpath}"/>
+			</manifest>
+		</jar>
+		<echo>Created ${runnablejar.dir}/sotavisiontest.jar</echo>
+	</target>
+
+	<!-- Build JAR + send to robot -->
+	<target name="jp.vstone.sotavisiontest.MainController" depends="setconf">
+		<antcall target="makeJar_visiontest"/>
+		<antcall target="send_rpi_file">
+			<param name="jar.name" value="${runnablejar.dir}/sotavisiontest.jar" />
+			<param name="to.path" value="${scp.senddir_pi}/SotaSample" />
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="${runnablejar.dir}/sotavisiontest.jar" />
+			<param name="to.path" value="${scp.senddir_edison}SotaSample" />
+		</antcall>
+	</target>
+
+	<!-- ============================================================ -->
+	<!-- VisionTestServer — Camera test tool (sends only JAR)       -->
+	<!-- ============================================================ -->
+
+	<!-- Create JAR for VisionTestServer -->
+	<target name="makeJar_visiontestserver" depends="compile_visiontest">
+		<mkdir dir="${runnablejar.dir}"/>
+		<jar jarfile="${runnablejar.dir}/visiontestserver.jar" basedir="${visiontest.bin}">
+			<manifest>
+				<attribute name="Main-Class" value="jp.vstone.sotavisiontest.VisionTestServer"/>
+				<attribute name="Class-Path" value="${runnable.classpath}"/>
+			</manifest>
+		</jar>
+		<echo>Created ${runnablejar.dir}/visiontestserver.jar</echo>
+	</target>
+
+	<!-- Build JAR + send VisionTestServer to robot -->
+	<target name="jp.vstone.sotavisiontest.VisionTestServer" depends="setconf">
+		<antcall target="makeJar_visiontestserver"/>
+		<antcall target="send_rpi_file">
+			<param name="jar.name" value="${runnablejar.dir}/visiontestserver.jar" />
+			<param name="to.path" value="${scp.senddir_pi}/SotaSample" />
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="${runnablejar.dir}/visiontestserver.jar" />
+			<param name="to.path" value="${scp.senddir_edison}SotaSample" />
+		</antcall>
+	</target>
+
+	<!-- ============================================================ -->
+	<!-- SotaWhisperTest — Whisper STT Java Client                    -->
+	<!-- ============================================================ -->
+
+	<property name="whispertest.src" value="SotaWhisperTest/java"/>
+	<property name="whispertest.bin" value="SotaWhisperTest/bin"/>
+
+	<!-- Compile WhisperSTT.java + TestWhisperSota.java (no SDK deps) -->
+	<target name="compile_whispertest">
+		<mkdir dir="${whispertest.bin}"/>
+		<javac srcdir="${whispertest.src}" destdir="${whispertest.bin}"
+			encoding="utf-8" source="1.8" target="1.8" includeantruntime="false"/>
+		<echo>SotaWhisperTest compiled!</echo>
+	</target>
+
+	<!-- Create JAR for WhisperTest -->
+	<target name="makeJar_whispertest" depends="compile_whispertest">
+		<mkdir dir="${runnablejar.dir}"/>
+		<jar jarfile="${runnablejar.dir}/whispertest.jar" basedir="${whispertest.bin}">
+			<manifest>
+				<attribute name="Main-Class" value="TestWhisperSota"/>
+				<attribute name="Class-Path" value="."/>
+			</manifest>
+		</jar>
+		<echo>Created ${runnablejar.dir}/whispertest.jar</echo>
+	</target>
+
+	<!-- Create remote directory on Edison -->
+	<target name="mkdir_whispertest_edison" if="is.Edison">
+		<sshexec host="${scp.server}"
+			username="${scp.edison.user}" password="${scp.edison.pass}"
+			command="mkdir -p /home/root/SotaWhisperTest"
+			trust="yes"/>
+		<echo>Created /home/root/SotaWhisperTest/ on Edison</echo>
+	</target>
+
+	<!-- Build JAR + send WhisperTest + audio to Edison -->
+	<target name="whispertest_to_edison" depends="setconf">
+		<antcall target="makeJar_whispertest"/>
+		<antcall target="mkdir_whispertest_edison"/>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="${runnablejar.dir}/whispertest.jar"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/audio/test_english.wav"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/audio/test_japanese.wav"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<echo>WhisperSTT deployed! On robot: cd /home/root/SotaWhisperTest &amp;&amp; java -jar whispertest.jar LAPTOP_IP test_english.wav</echo>
+	</target>
+
+	<!-- ============================================================ -->
+	<!-- WhisperInteraction — Face + Whisper + LLM + TTS + Motion    -->
+	<!-- ============================================================ -->
+
+	<property name="whisperinteraction.src" value="SotaWhisperTest/interaction/src"/>
+	<property name="whisperinteraction.bin" value="SotaWhisperTest/interaction/bin"/>
+
+	<!-- Compile WhisperInteraction (needs SDK classpath for CRecordMic, CSotaMotion, etc.) -->
+	<target name="compile_whisperinteraction">
+		<mkdir dir="${whisperinteraction.bin}"/>
+		<javac classpathref="build.lib" srcdir="${whisperinteraction.src}"
+			destdir="${whisperinteraction.bin}"
+			encoding="utf-8" source="1.8" target="1.8" includeantruntime="false"/>
+		<echo>WhisperInteraction compiled!</echo>
+	</target>
+
+	<!-- Create JAR for WhisperInteraction -->
+	<target name="makeJar_whisperinteraction" depends="compile_whisperinteraction">
+		<mkdir dir="${runnablejar.dir}"/>
+		<jar jarfile="${runnablejar.dir}/whisperinteraction.jar" basedir="${whisperinteraction.bin}">
+			<manifest>
+				<attribute name="Main-Class" value="jp.vstone.sotawhisper.WhisperInteraction"/>
+				<attribute name="Class-Path" value="${runnable.classpath}"/>
+			</manifest>
+		</jar>
+		<echo>Created ${runnablejar.dir}/whisperinteraction.jar</echo>
+	</target>
+
+	<!-- Build JAR + send WhisperInteraction + run script to Edison -->
+	<target name="whisperinteraction_to_edison" depends="setconf">
+		<antcall target="makeJar_whisperinteraction"/>
+		<antcall target="mkdir_whispertest_edison"/>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="${runnablejar.dir}/whisperinteraction.jar"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/interaction/run_interaction.sh"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<sshexec host="${scp.server}"
+			username="${scp.edison.user}" password="${scp.edison.pass}"
+			command="sed -i 's/\r$//' /home/root/SotaWhisperTest/run_interaction.sh &amp;&amp; chmod +x /home/root/SotaWhisperTest/run_interaction.sh"
+			trust="yes"/>
+		<echo>WhisperInteraction deployed! On robot: cd /home/root/SotaWhisperTest &amp;&amp; ./run_interaction.sh LAPTOP_IP</echo>
+	</target>
+
+	<!-- Send entire SotaSample project (termasuk SotaVisionTest) -->
+	<target name="send_all" depends="setconf,send_rpi,send_edison">
+		<echo>Entire SotaSample project sent (termasuk SotaVisionTest)</echo>
+	</target>
+
+</project>
