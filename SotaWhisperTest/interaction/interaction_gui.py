@@ -39,27 +39,39 @@ except ImportError:
 
 # State color map
 STATE_COLORS = {
-    "init":       ("#607D8B", "white"),   # gray
-    "idle":       ("#ECEFF1", "black"),   # light gray
-    "greeting":   ("#66BB6A", "white"),   # green
-    "listening":  ("#26C6DA", "white"),   # cyan
-    "thinking":   ("#FFCA28", "black"),   # yellow
-    "responding": ("#43A047", "white"),   # dark green
-    "closing":    ("#90A4AE", "white"),   # gray
-    "shutdown":   ("#F44336", "white"),   # red
-    "error":      ("#D32F2F", "white"),   # dark red
+    "init":        ("#607D8B", "white"),   # gray
+    "idle":        ("#ECEFF1", "black"),   # light gray
+    "recognizing": ("#FF8C00", "white"),   # orange
+    "greeting":    ("#66BB6A", "white"),   # green
+    "registering": ("#DAA520", "white"),   # gold
+    "listening":   ("#26C6DA", "white"),   # cyan
+    "thinking":    ("#FFCA28", "black"),   # yellow
+    "responding":  ("#43A047", "white"),   # dark green
+    "closing":     ("#90A4AE", "white"),   # gray
+    "shutdown":    ("#F44336", "white"),   # red
+    "error":       ("#D32F2F", "white"),   # dark red
 }
 
 STATE_LABELS = {
-    "init":       "INITIALIZING",
-    "idle":       "IDLE -- Waiting for face",
-    "greeting":   "GREETING",
-    "listening":  "LISTENING -- Recording...",
-    "thinking":   "THINKING -- LLM processing...",
-    "responding": "RESPONDING -- Speaking...",
-    "closing":    "CLOSING -- Goodbye",
-    "shutdown":   "SHUTDOWN",
-    "error":      "ERROR",
+    "init":        "INITIALIZING",
+    "idle":        "IDLE -- Waiting for face",
+    "recognizing": "RECOGNIZING -- Identifying face...",
+    "greeting":    "GREETING",
+    "registering": "REGISTERING -- New user setup...",
+    "listening":   "LISTENING -- Recording...",
+    "thinking":    "THINKING -- LLM processing...",
+    "responding":  "RESPONDING -- Speaking...",
+    "closing":     "CLOSING -- Goodbye",
+    "shutdown":    "SHUTDOWN",
+    "error":       "ERROR",
+}
+
+# Social state colors for User Profile panel
+SOCIAL_COLORS = {
+    "stranger":     "#9E9E9E",
+    "acquaintance": "#42A5F5",
+    "friendly":     "#66BB6A",
+    "close":        "#AB47BC",
 }
 
 
@@ -68,8 +80,8 @@ class InteractionGUI:
                  whisper_port=5050, ollama_port=11434):
         self.root = root
         self.root.title("Sota Interaction Monitor")
-        self.root.geometry("780x820")
-        self.root.minsize(700, 700)
+        self.root.geometry("780x920")
+        self.root.minsize(700, 800)
 
         self.robot_ip = robot_ip
         self.status_port = status_port
@@ -211,6 +223,34 @@ class InteractionGUI:
             self.conv_vars[key] = var
 
         conv_grid.columnconfigure(1, weight=1)
+
+        # --- User Profile frame ---
+        profile_frame = ttk.LabelFrame(self.root, text="User Profile", padding=8)
+        profile_frame.pack(fill="x", padx=8, pady=4)
+
+        profile_grid = ttk.Frame(profile_frame)
+        profile_grid.pack(fill="x")
+
+        self.profile_vars = {}
+        profile_labels = [
+            ("name", "Name:"),
+            ("origin", "Origin:"),
+            ("interactions", "Interactions:"),
+            ("social_level", "Relationship:"),
+            ("language", "Language:"),
+        ]
+        for i, (key, label) in enumerate(profile_labels):
+            ttk.Label(profile_grid, text=label, font=("Consolas", 10)).grid(
+                row=0 if i < 3 else 1, column=(i % 3) * 2, sticky="w", padx=(0 if i % 3 == 0 else 12, 4), pady=2)
+            var = tk.StringVar(value="-")
+            lbl = tk.Label(profile_grid, textvariable=var, font=("Consolas", 10, "bold"),
+                           fg="#37474F")
+            lbl.grid(row=0 if i < 3 else 1, column=(i % 3) * 2 + 1, sticky="w", pady=2)
+            self.profile_vars[key] = (var, lbl)
+
+        profile_grid.columnconfigure(1, weight=1)
+        profile_grid.columnconfigure(3, weight=1)
+        profile_grid.columnconfigure(5, weight=1)
 
         # --- Log frame ---
         log_frame = ttk.LabelFrame(self.root, text="Log", padding=4)
@@ -430,6 +470,27 @@ class InteractionGUI:
         self.conv_vars["user_text"].set(data.get("lastUserText", "-") or "-")
         self.conv_vars["user_en"].set(data.get("lastUserTextEn", "-") or "-")
         self.conv_vars["sota_text"].set(data.get("lastSotaText", "-") or "-")
+
+        # --- User Profile ---
+        user_name = data.get("userName", "") or ""
+        user_origin = data.get("userOrigin", "") or ""
+        user_interactions = data.get("userInteractions", 0)
+        user_social = data.get("userSocialLevel", "") or ""
+        user_lang = data.get("detectedLanguage", "") or ""
+
+        self.profile_vars["name"][0].set(user_name if user_name else "-")
+        self.profile_vars["origin"][0].set(user_origin if user_origin else "-")
+        self.profile_vars["interactions"][0].set(str(user_interactions) if user_interactions else "-")
+
+        if user_social:
+            self.profile_vars["social_level"][0].set(user_social.upper())
+            social_color = SOCIAL_COLORS.get(user_social, "#37474F")
+            self.profile_vars["social_level"][1].config(fg=social_color)
+        else:
+            self.profile_vars["social_level"][0].set("-")
+            self.profile_vars["social_level"][1].config(fg="#37474F")
+
+        self.profile_vars["language"][0].set(user_lang if user_lang else "-")
 
         # Robot is alive (we just got a response)
         self.prereq_indicators["robot"].config(text="  OK  ", bg="#2e7d32")

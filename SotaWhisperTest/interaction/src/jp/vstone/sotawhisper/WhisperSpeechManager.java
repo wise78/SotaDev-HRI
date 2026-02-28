@@ -27,6 +27,20 @@ public class WhisperSpeechManager {
     private static final int MAX_RECORDING_MS = 15000;
     private static final String TEMP_WAV      = "/tmp/whisper_input.wav";
 
+    // Hallucination filter thresholds
+    private static final int    MIN_PEAK_RMS   = 250;
+    private static final int    MIN_VAD_EVENTS = 2;
+
+    // Known Whisper hallucination patterns (common on silence/noise)
+    private static final String[] HALLUCINATION_PATTERNS = {
+        "thank you for watching", "thanks for watching",
+        "please subscribe", "like and subscribe",
+        "subtitles by", "captions by", "translated by",
+        "copyright", "all rights reserved",
+        "www.", "http", ".com", ".org",
+        "the end", "to be continued"
+    };
+
     // TTS failure counter
     private int ttsFailureCount = 0;
 
@@ -154,9 +168,22 @@ public class WhisperSpeechManager {
             return new WhisperSTT.WhisperResult("", "", "", false, 0);
         }
 
+        // Pre-transcription quality gate: skip Whisper if audio has no real speech
+        if (rec.peakRms < MIN_PEAK_RMS || rec.vadEvents < MIN_VAD_EVENTS) {
+            log("Skipping Whisper — low quality audio (peakRms=" + rec.peakRms
+                + ", vadEvents=" + rec.vadEvents + ")");
+            return new WhisperSTT.WhisperResult("", "", "", false, 0);
+        }
+
         log("Transcribing " + wavFile.length() / 1024 + " KB (peak RMS=" + rec.peakRms
             + ", vadEvents=" + rec.vadEvents + ")...");
         WhisperSTT.WhisperResult result = whisperSTT.transcribe(rec.filePath, true);
+
+        // Post-transcription hallucination filter
+        if (result.ok && isHallucination(result.textEn)) {
+            log("Filtered hallucination: '" + result.textEn + "'");
+            return new WhisperSTT.WhisperResult("", "", "", false, 0);
+        }
 
         if (result.ok && result.text.length() > 0) {
             log("Heard [" + result.language + "]: " + result.text);
@@ -261,6 +288,40 @@ public class WhisperSpeechManager {
         } catch (Exception e) {
             log("WARN: Cannot play: " + filePath);
         }
+    }
+
+    // ----------------------------------------------------------------
+    // Hallucination detection
+    // ----------------------------------------------------------------
+
+    /**
+     * Check if transcribed text is likely a Whisper hallucination.
+     * Common hallucinations include: subtitle credits, repetitive patterns,
+     * and very short meaningless text.
+     */
+    private boolean isHallucination(String text) {
+        if (text == null || text.trim().isEmpty()) return true;
+        String lower = text.toLowerCase().trim();
+        if (lower.length() < 3) return true;
+
+        // Repetitive pattern (e.g., "1.5% 1.5% 1.5%")
+        // Check if the text is mostly repeating a short substring
+        if (lower.length() >= 6) {
+            for (int len = 1; len <= 10 && len <= lower.length() / 3; len++) {
+                String sub = lower.substring(0, len);
+                String repeated = lower.replace(sub, "").replaceAll("[\\s,.]", "");
+                if (repeated.length() < lower.length() / 4) {
+                    return true;
+                }
+            }
+        }
+
+        // Known hallucination phrases
+        for (int i = 0; i < HALLUCINATION_PATTERNS.length; i++) {
+            if (lower.contains(HALLUCINATION_PATTERNS[i])) return true;
+        }
+
+        return false;
     }
 
     // ----------------------------------------------------------------

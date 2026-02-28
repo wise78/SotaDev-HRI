@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 
 /**
  * HTTP client for Ollama LLM server. Streaming NDJSON.
@@ -64,6 +65,21 @@ public class LlamaClient {
         String messagesJson = "[" + jsonMessage("system", systemPrompt) + ","
                             + jsonMessage("user", userMessage) + "]";
         return sendToLLM(messagesJson);
+    }
+
+    /**
+     * Multi-turn chat with conversation history.
+     * @param systemPrompt  System prompt
+     * @param history       List of pre-built JSON message objects (from jsonMessage())
+     */
+    public LLMResult chatMultiTurn(String systemPrompt, List history) {
+        StringBuilder sb = new StringBuilder("[");
+        sb.append(jsonMessage("system", systemPrompt));
+        for (int i = 0; i < history.size(); i++) {
+            sb.append(",").append((String) history.get(i));
+        }
+        sb.append("]");
+        return sendToLLM(sb.toString());
     }
 
     private LLMResult sendToLLM(String messagesJson) {
