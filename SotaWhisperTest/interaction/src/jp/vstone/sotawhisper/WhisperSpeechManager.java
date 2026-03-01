@@ -38,7 +38,13 @@ public class WhisperSpeechManager {
         "subtitles by", "captions by", "translated by",
         "copyright", "all rights reserved",
         "www.", "http", ".com", ".org",
-        "the end", "to be continued"
+        "the end", "to be continued",
+        // Japanese hallucinations (common on silence/noise with Whisper)
+        "\u3054\u8996\u8074\u3042\u308a\u304c\u3068\u3046",       // ご視聴ありがとう
+        "\u304a\u758e\u3044\u3057\u307e\u3057\u305f",               // お疎いしました (nonsense)
+        "\u5b57\u5e55",                                               // 字幕
+        "\u30c1\u30e3\u30f3\u30cd\u30eb\u767b\u9332",               // チャンネル登録
+        "\u7d9a\u304f"                                                // 続く (to be continued)
     };
 
     // TTS failure counter
@@ -147,6 +153,16 @@ public class WhisperSpeechManager {
      * @return WhisperResult (check .ok for success)
      */
     public WhisperSTT.WhisperResult listen(int maxDurationMs) {
+        return listen(maxDurationMs, true);
+    }
+
+    /**
+     * Record audio with real-time RMS VAD, send to Whisper, return full result.
+     * @param maxDurationMs      Maximum recording duration
+     * @param translateToEnglish Request English translation from server
+     * @return WhisperResult (check .ok for success)
+     */
+    public WhisperSTT.WhisperResult listen(int maxDurationMs, boolean translateToEnglish) {
         log("Listening... (max " + maxDurationMs + "ms)");
 
         DirectVADRecorder.RecordingResult rec = vadRecorder.record(TEMP_WAV, maxDurationMs);
@@ -168,20 +184,25 @@ public class WhisperSpeechManager {
             return new WhisperSTT.WhisperResult("", "", "", false, 0);
         }
 
-        // Pre-transcription quality gate: skip Whisper if audio has no real speech
-        if (rec.peakRms < MIN_PEAK_RMS || rec.vadEvents < MIN_VAD_EVENTS) {
+        // Pre-transcription quality gate: only skip when BOTH signals are weak.
+        // This keeps short but valid utterances (e.g., names) from being dropped.
+        if (rec.peakRms < MIN_PEAK_RMS && rec.vadEvents < MIN_VAD_EVENTS) {
             log("Skipping Whisper — low quality audio (peakRms=" + rec.peakRms
                 + ", vadEvents=" + rec.vadEvents + ")");
             return new WhisperSTT.WhisperResult("", "", "", false, 0);
         }
 
         log("Transcribing " + wavFile.length() / 1024 + " KB (peak RMS=" + rec.peakRms
-            + ", vadEvents=" + rec.vadEvents + ")...");
-        WhisperSTT.WhisperResult result = whisperSTT.transcribe(rec.filePath, true);
+            + ", vadEvents=" + rec.vadEvents + ", translate=" + translateToEnglish + ")...");
+        WhisperSTT.WhisperResult result = whisperSTT.transcribe(rec.filePath, translateToEnglish);
 
-        // Post-transcription hallucination filter
+        // Post-transcription hallucination filter — check both original and English
         if (result.ok && isHallucination(result.textEn)) {
-            log("Filtered hallucination: '" + result.textEn + "'");
+            log("Filtered hallucination (EN): '" + result.textEn + "'");
+            return new WhisperSTT.WhisperResult("", "", "", false, 0);
+        }
+        if (result.ok && !result.text.equals(result.textEn) && isHallucination(result.text)) {
+            log("Filtered hallucination (original): '" + result.text + "'");
             return new WhisperSTT.WhisperResult("", "", "", false, 0);
         }
 
@@ -199,7 +220,7 @@ public class WhisperSpeechManager {
 
     /** Listen with default max duration. */
     public WhisperSTT.WhisperResult listen() {
-        return listen(MAX_RECORDING_MS);
+        return listen(MAX_RECORDING_MS, true);
     }
 
     /**

@@ -1,15 +1,10 @@
 package jp.vstone.sotawhisper;
 
 import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.imageio.ImageIO;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -79,8 +74,8 @@ public class WhisperInteraction {
     private static final int    LLM_TIMEOUT_MS      = 120000;
     private static final int    STATUS_PORT         = 5051;
 
-    private static final int    MAX_CONVERSATION_TURNS = 8;
     private static final int    MAX_SILENCE_RETRIES    = 2;
+    private static final int    FACE_GONE_THRESHOLD    = 3;  // consecutive no-face checks before closing
     private static final int    LISTEN_DURATION_MS     = 15000;
     private static final int    COOLDOWN_MS            = 3000;
     private static final int    FACE_POLL_MS           = 300;
@@ -131,6 +126,7 @@ public class WhisperInteraction {
     private String  participantId = "";    // --participant-id
     private String  groupId       = "";    // --group (G1/G2)
     private String  sessionNum    = "";    // --session (1/2)
+    private volatile String baseLanguage = "en";  // "en" or "ja" — robot's response language
 
     // ----------------------------------------------------------------
     // Main entry point
@@ -155,6 +151,7 @@ public class WhisperInteraction {
             System.out.println("  --participant-id <id>   Participant ID (e.g., P01)");
             System.out.println("  --group <g1|g2>         Group assignment");
             System.out.println("  --session <1|2>         Session number");
+            System.out.println("  --language <en|ja>      Base response language (default: en)");
             System.out.println();
             System.out.println("Example:");
             System.out.println("  java -jar whisperinteraction.jar 192.168.11.32");
@@ -171,6 +168,7 @@ public class WhisperInteraction {
         String pidFlag      = "";
         String groupFlag    = "";
         String sessionFlag  = "";
+        String langFlag     = "en";
 
         for (int i = 1; i < args.length; i++) {
             if ("--whisper-port".equals(args[i]) && i + 1 < args.length) {
@@ -189,6 +187,8 @@ public class WhisperInteraction {
                 groupFlag = args[++i].toUpperCase();
             } else if ("--session".equals(args[i]) && i + 1 < args.length) {
                 sessionFlag = args[++i];
+            } else if ("--language".equals(args[i]) && i + 1 < args.length) {
+                langFlag = args[++i].toLowerCase();
             }
         }
 
@@ -207,6 +207,7 @@ public class WhisperInteraction {
             System.out.println("  Group        : " + groupFlag);
             System.out.println("  Session      : " + sessionFlag);
         }
+        System.out.println("  Language     : " + langFlag.toUpperCase());
         System.out.println();
 
         WhisperInteraction app = new WhisperInteraction();
@@ -214,6 +215,7 @@ public class WhisperInteraction {
         app.participantId = pidFlag;
         app.groupId = groupFlag;
         app.sessionNum = sessionFlag;
+        app.baseLanguage = langFlag;
         app.initialize(laptopIp, whisperPort, ollamaPort, modelName, statusPort);
         app.run();
     }
@@ -230,6 +232,13 @@ public class WhisperInteraction {
         // 0. Status server (start early so GUI can connect during init)
         statusServer = new StatusServer(statusPort);
         statusServer.update("state", "init");
+        statusServer.update("baseLanguage", baseLanguage);
+        statusServer.setLanguageChangeListener(new StatusServer.LanguageChangeListener() {
+            public void onLanguageChanged(String lang) {
+                baseLanguage = lang;
+                log("Base language changed via GUI: " + lang);
+            }
+        });
         statusServer.start();
 
         // 1. Robot connection
@@ -316,7 +325,7 @@ public class WhisperInteraction {
         log("DeepFaceClient ready");
 
         // Update status
-        statusServer.update("maxTurns", Integer.valueOf(MAX_CONVERSATION_TURNS));
+        statusServer.update("maxTurns", Integer.valueOf(0));  // 0 = unlimited
         statusServer.update("noMemory", Boolean.valueOf(noMemory));
         statusServer.update("participantId", participantId);
         statusServer.update("group", groupId);
@@ -442,6 +451,10 @@ public class WhisperInteraction {
             }
 
             isNewUser = false;
+            // If we have language memory, use it immediately for greeting before first utterance.
+            if (currentUser.preferredLanguage != null && !currentUser.preferredLanguage.isEmpty()) {
+                recordDetectedLanguage(currentUser.preferredLanguage);
+            }
             updateUserStatus();
         } else if (noMemory && faceUser != null && !faceUser.isNewUser()) {
             // --no-memory: face is known but we pretend it's new
@@ -488,38 +501,12 @@ public class WhisperInteraction {
 
         String greeting;
         if (!isNewUser && currentUser != null && !currentUser.name.isEmpty()) {
-            // REMEMBER condition: personalized greeting with explicit memory reference
-            String socialLabel = currentUser.socialState;
-            String memoryRef = "";
-
-            // Reference past conversation if available
-            if (currentUser.shortMemorySummary != null && !currentUser.shortMemorySummary.isEmpty()) {
-                memoryRef = " Last time we talked about some interesting things!";
-            } else if (currentUser.interactionCount > 1) {
-                memoryRef = " We've met " + currentUser.interactionCount + " times now!";
-            }
-
-            if (UserMemory.SOCIAL_CLOSE.equals(socialLabel)) {
-                greeting = "Hey " + currentUser.name + "! Great to see you again!" + memoryRef
-                    + " How's your day going?";
-            } else if (UserMemory.SOCIAL_FRIENDLY.equals(socialLabel)) {
-                greeting = "Hi " + currentUser.name + "! Nice to see you again!" + memoryRef
-                    + " What's up?";
-            } else {
-                greeting = "Hello " + currentUser.name + "! I remember you! Welcome back!"
-                    + memoryRef + " How are you?";
-            }
-            log("REMEMBER greeting: " + greeting);
+            // REMEMBER condition: personalized greeting with name + culture + memory
+            greeting = buildRememberGreeting();
+            log("REMEMBER greeting: " + greeting + " (origin=" + currentUser.origin + ")");
         } else {
             // New user or NO-REMEMBER: generic stranger greeting
-            if (currentUser != null && !currentUser.origin.isEmpty()) {
-                greeting = "Hello! I'm Sota, a friendly robot. Nice to meet you! "
-                    + "Are you from " + currentUser.origin + "?";
-                log("New user greeting with ethnicity guess: " + currentUser.origin);
-            } else {
-                greeting = "Hello! I'm Sota, a friendly robot. Nice to meet you!";
-                log("New user greeting (generic)");
-            }
+            greeting = buildStrangerGreeting();
             if (noMemory) {
                 log("(--no-memory active: treating as stranger)");
             }
@@ -538,6 +525,193 @@ public class WhisperInteraction {
         }
     }
 
+    /** Build REMEMBER greeting using baseLanguage. */
+    private String buildRememberGreeting() {
+        String name = currentUser.name;
+        String memoryRef = "";
+        String cultureRef = "";
+
+        if ("ja".equals(baseLanguage)) {
+            // Japanese greetings
+            if (currentUser.shortMemorySummary != null && !currentUser.shortMemorySummary.isEmpty()) {
+                memoryRef = "前回は楽しかったね！";
+            } else if (currentUser.interactionCount > 1) {
+                memoryRef = "もう" + currentUser.interactionCount + "回目だね！";
+            }
+            if (currentUser.origin != null && !currentUser.origin.isEmpty()) {
+                cultureRef = currentUser.origin + "の";
+            }
+            return cultureRef + name + "さん！また会えて嬉しいよ！" + memoryRef + "元気？";
+        }
+
+        // English greetings
+        if (currentUser.shortMemorySummary != null && !currentUser.shortMemorySummary.isEmpty()) {
+            memoryRef = " Last time we talked about some interesting things!";
+        } else if (currentUser.interactionCount > 1) {
+            memoryRef = " We've met " + currentUser.interactionCount + " times now!";
+        }
+        if (currentUser.origin != null && !currentUser.origin.isEmpty()) {
+            cultureRef = ", my friend from " + currentUser.origin + "!";
+        }
+
+        String socialLabel = currentUser.socialState;
+        if (UserMemory.SOCIAL_CLOSE.equals(socialLabel)) {
+            return !cultureRef.isEmpty()
+                ? "Hey " + name + cultureRef + " Great to see you again!" + memoryRef + " How's your day going?"
+                : "Hey " + name + "! Great to see you again!" + memoryRef + " How's your day going?";
+        } else if (UserMemory.SOCIAL_FRIENDLY.equals(socialLabel)) {
+            return !cultureRef.isEmpty()
+                ? "Hi " + name + cultureRef + " Nice to see you again!" + memoryRef + " What's up?"
+                : "Hi " + name + "! Nice to see you again!" + memoryRef + " What's up?";
+        } else {
+            return !cultureRef.isEmpty()
+                ? "Hello " + name + cultureRef + " I remember you! Welcome back!" + memoryRef + " How are you?"
+                : "Hello " + name + "! I remember you! Welcome back!" + memoryRef + " How are you?";
+        }
+    }
+
+    /** Build stranger/new-user greeting using baseLanguage. */
+    private String buildStrangerGreeting() {
+        if ("ja".equals(baseLanguage)) {
+            if (currentUser != null && !currentUser.origin.isEmpty()) {
+                log("New user greeting with ethnicity guess (JA): " + currentUser.origin);
+                return "こんにちは。ぼくはソータです。" + currentUser.origin + "から来たの？よろしくね。";
+            }
+            log("New user greeting (generic JA)");
+            return "こんにちは。ぼくはソータです。よろしくね。";
+        }
+
+        // English
+        if (currentUser != null && !currentUser.origin.isEmpty()) {
+            log("New user greeting with ethnicity guess: " + currentUser.origin);
+            return "Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from " + currentUser.origin + "?";
+        }
+        log("New user greeting (generic)");
+        return "Hello! I'm Sota, a friendly robot. Nice to meet you!";
+    }
+
+    /**
+     * Listen for user's name, handling both English and Japanese.
+     * In Japanese mode, uses the original Whisper text (not translation).
+     * In English mode, uses the English translation and strips prefixes.
+     */
+    private String listenAndExtractName(int timeoutMs) {
+        WhisperSTT.WhisperResult result = speechManager.listen(
+            timeoutMs, shouldTranslateForCurrentMode());
+        if (!result.ok) return null;
+
+        String raw;
+        if ("ja".equals(baseLanguage)) {
+            // Use original text for Japanese — Whisper's English translation of names is unreliable
+            raw = result.text.trim();
+            log("Name listen (JA original): " + raw);
+
+            // Strip common Japanese patterns: "〇〇です", "〇〇と申します", "〇〇だよ", etc.
+            String[] jaSuffixes = {"です", "と申します", "ともうします", "だよ", "だ", "っす",
+                                   "と言います", "といいます", "ですよ"};
+            for (int i = 0; i < jaSuffixes.length; i++) {
+                if (raw.endsWith(jaSuffixes[i])) {
+                    raw = raw.substring(0, raw.length() - jaSuffixes[i].length()).trim();
+                    break;
+                }
+            }
+            // Strip common prefixes: "私は", "僕は", "名前は", "俺は"
+            String[] jaPrefixes = {"私は", "わたしは", "僕は", "ぼくは", "俺は", "おれは",
+                                   "名前は", "なまえは", "私の名前は", "僕の名前は"};
+            for (int i = 0; i < jaPrefixes.length; i++) {
+                if (raw.startsWith(jaPrefixes[i])) {
+                    raw = raw.substring(jaPrefixes[i].length()).trim();
+                    break;
+                }
+            }
+
+            // If the utterance contains greeting/fillers before self-introduction,
+            // extract the segment after a name marker.
+            String[] jaNameMarkers = {"私の名前は", "わたしの名前は", "名前は", "なまえは",
+                                      "僕の名前は", "ぼくの名前は", "俺の名前は", "おれの名前は"};
+            for (int i = 0; i < jaNameMarkers.length; i++) {
+                int idx = raw.indexOf(jaNameMarkers[i]);
+                if (idx >= 0) {
+                    raw = raw.substring(idx + jaNameMarkers[i].length()).trim();
+                    break;
+                }
+            }
+
+            // Strip common leading greetings/fillers left after extraction.
+            String[] jaLeadFillers = {"こんにちは", "こんばんは", "はじめまして", "えっと", "あの", "えーと"};
+            for (int i = 0; i < jaLeadFillers.length; i++) {
+                if (raw.startsWith(jaLeadFillers[i])) {
+                    raw = raw.substring(jaLeadFillers[i].length()).trim();
+                    break;
+                }
+            }
+            while (raw.startsWith("、") || raw.startsWith("。") || raw.startsWith(",")) {
+                raw = raw.substring(1).trim();
+            }
+        } else {
+            // English mode: use the English translation
+            raw = result.textEn.trim();
+            if (raw.isEmpty()) return null;
+            log("Name listen (EN): " + raw);
+
+            // Strip English prefixes
+            String[] enPrefixes = {"my name is ", "i'm ", "i am ", "it's ", "call me ",
+                                   "this is ", "the name is "};
+            String lower = raw.toLowerCase();
+            for (int i = 0; i < enPrefixes.length; i++) {
+                if (lower.startsWith(enPrefixes[i])) {
+                    raw = raw.substring(enPrefixes[i].length()).trim();
+                    break;
+                }
+            }
+        }
+
+        // Remove trailing punctuation
+        while (raw.length() > 0) {
+            char last = raw.charAt(raw.length() - 1);
+            if (last == '.' || last == ',' || last == '!' || last == '?' || last == '。'
+                || last == '、' || last == '！') {
+                raw = raw.substring(0, raw.length() - 1).trim();
+            } else {
+                break;
+            }
+        }
+
+        // Sanity check: name too long is likely garbage or a full sentence
+        int maxLen = "ja".equals(baseLanguage) ? 15 : 30;  // CJK names are shorter
+        if (raw.length() > maxLen) {
+            log("WARN: Name too long (" + raw.length() + " chars), likely misrecognition: " + raw);
+            if ("ja".equals(baseLanguage)) {
+                // For CJK: take up to 8 chars (typical Japanese name length)
+                // But check for common sentence-enders first (discard full sentences)
+                boolean isSentence = false;
+                String[] sentenceEnders = {"\u3002", "\u3088", "\u306d", "\u3088\u308d\u3057\u304f",
+                                           "\u3067\u3059", "\u307e\u3059"};
+                for (int i = 0; i < sentenceEnders.length; i++) {
+                    if (raw.contains(sentenceEnders[i])) { isSentence = true; break; }
+                }
+                if (isSentence) {
+                    log("Looks like a sentence, not a name. Discarding.");
+                    return null;
+                }
+                raw = raw.substring(0, Math.min(raw.length(), 8));
+                log("Truncated CJK name: " + raw);
+            } else {
+                // English: try first word
+                int space = raw.indexOf(' ');
+                if (space > 0 && space < 20) {
+                    raw = raw.substring(0, space).trim();
+                    log("Using first word: " + raw);
+                } else {
+                    return null;
+                }
+            }
+        }
+
+        log("Name extracted: " + raw);
+        return raw.isEmpty() ? null : raw;
+    }
+
     // ----------------------------------------------------------------
     // State: REGISTERING — ask name, detect culture, register face
     // ----------------------------------------------------------------
@@ -547,21 +721,23 @@ public class WhisperInteraction {
         gestureManager.setState(STATE_REGISTERING);
 
         // Step 1: Ask for name
-        String askName = "What's your name?";
+        String askName = "ja".equals(baseLanguage) ? "お名前は？" : "What's your name?";
         statusServer.update("lastSotaText", askName);
         speechManager.speak(askName);
 
-        String name = speechManager.listenForName(LISTEN_DURATION_MS);
+        String name = listenAndExtractName(LISTEN_DURATION_MS);
         if (name == null || name.isEmpty()) {
             // Retry once
-            String retry = "Sorry, I couldn't hear that. Could you tell me your name again?";
+            String retry = "ja".equals(baseLanguage)
+                ? "ごめんね、聞こえなかった。もう一回名前を教えて？"
+                : "Sorry, I couldn't hear that. Could you tell me your name again?";
             statusServer.update("lastSotaText", retry);
             speechManager.speak(retry);
-            name = speechManager.listenForName(LISTEN_DURATION_MS);
+            name = listenAndExtractName(LISTEN_DURATION_MS);
         }
 
         if (name == null || name.isEmpty()) {
-            name = "Friend";
+            name = "ja".equals(baseLanguage) ? "ともだち" : "Friend";
             log("Could not get name, using default: " + name);
         }
 
@@ -596,29 +772,46 @@ public class WhisperInteraction {
         }
 
         // Step 2: Culture/origin detection via language
-        // First, do a short listen to detect language
-        String askOrigin = "Nice to meet you, " + name + "! Where are you from?";
+        String askOrigin = "ja".equals(baseLanguage)
+            ? name + "さん、よろしくね！どこから来たの？"
+            : "Nice to meet you, " + name + "! Where are you from?";
         statusServer.update("lastSotaText", askOrigin);
         speechManager.speak(askOrigin);
 
-        WhisperSTT.WhisperResult originResult = speechManager.listen(LISTEN_DURATION_MS);
-        if (originResult.ok && !originResult.textEn.isEmpty()) {
+        WhisperSTT.WhisperResult originResult = speechManager.listen(
+            LISTEN_DURATION_MS, shouldTranslateForCurrentMode());
+        if (originResult.ok && (originResult.text.length() > 0 || originResult.textEn.length() > 0)) {
             // Store detected language
             currentUser.detectedLanguage = originResult.language;
             lastDetectedLang = originResult.language;
+            recordDetectedLanguage(originResult.language);
 
-            // Try to extract origin from the response
+            // Try to extract origin — use both original and English text
             String originText = originResult.textEn.trim();
-            log("Origin response [" + originResult.language + "]: " + originText);
+            String originOriginal = originResult.text.trim();
+            log("Origin response [" + originResult.language + "]: " + originOriginal
+                + " (en: " + originText + ")");
 
-            // The user's answer likely contains their country/origin
-            currentUser.origin = extractOrigin(originText);
+            // JA mode: try original text first (Japanese patterns like "日本から来ました")
+            // EN mode: try English translation first
+            if ("ja".equals(baseLanguage)) {
+                currentUser.origin = extractOrigin(originOriginal);
+                if (currentUser.origin.isEmpty() && !originText.isEmpty()
+                        && !originText.equals(originOriginal)) {
+                    currentUser.origin = extractOrigin(originText);
+                }
+            } else {
+                currentUser.origin = extractOrigin(originText);
+                if (currentUser.origin.isEmpty() && !originOriginal.equals(originText)) {
+                    currentUser.origin = extractOrigin(originOriginal);
+                }
+            }
             if (currentUser.origin.isEmpty()) {
                 // If couldn't extract, try language-based inference
                 String inferred = UserMemory.languageToCountry(originResult.language);
                 if (inferred != null) {
-                    currentUser.origin = inferred;
-                    log("Inferred origin from language: " + inferred);
+                    currentUser.origin = localizeCountryName(inferred);
+                    log("Inferred origin from language: " + currentUser.origin);
                 }
             }
 
@@ -626,7 +819,9 @@ public class WhisperInteraction {
 
             // Confirm
             if (!currentUser.origin.isEmpty()) {
-                String confirm = "Oh, " + currentUser.origin + "! That's wonderful!";
+                String confirm = "ja".equals(baseLanguage)
+                    ? "へえ、" + currentUser.origin + "！すごいね！"
+                    : "Oh, " + currentUser.origin + "! That's wonderful!";
                 statusServer.update("lastSotaText", confirm);
                 speechManager.speak(confirm);
             }
@@ -634,8 +829,8 @@ public class WhisperInteraction {
             // Couldn't hear origin, try language inference
             String inferred = UserMemory.languageToCountry(lastDetectedLang);
             if (inferred != null) {
-                currentUser.origin = inferred;
-                log("No origin response, inferred from language: " + inferred);
+                currentUser.origin = localizeCountryName(inferred);
+                log("No origin response, inferred from language: " + currentUser.origin);
             }
         }
 
@@ -656,14 +851,15 @@ public class WhisperInteraction {
     private WhisperSTT.WhisperResult lastWhisperResult = null;
 
     private void handleListening() {
-        log("--- LISTENING (turn " + (conversationTurn + 1) + "/" + MAX_CONVERSATION_TURNS + ") ---");
+        log("--- LISTENING (turn " + (conversationTurn + 1) + ") ---");
         gestureManager.setState(STATE_LISTENING);
         SoundEffects.play(SoundEffects.SFX_LISTENING);
         statusServer.update("turn", Integer.valueOf(conversationTurn + 1));
 
-        WhisperSTT.WhisperResult result = speechManager.listen(LISTEN_DURATION_MS);
+        WhisperSTT.WhisperResult result = speechManager.listen(
+            LISTEN_DURATION_MS, shouldTranslateForCurrentMode());
 
-        if (!result.ok || result.textEn.isEmpty()) {
+        if (!result.ok || (result.textEn.isEmpty() && result.text.isEmpty())) {
             silenceRetryCount++;
             statusServer.update("silenceRetries", Integer.valueOf(silenceRetryCount));
             log("No speech detected (retry " + silenceRetryCount + "/" + MAX_SILENCE_RETRIES + ")");
@@ -676,7 +872,9 @@ public class WhisperInteraction {
             }
 
             gestureManager.setState(STATE_RESPONDING);
-            String retryMsg = "I can't hear you. Could you say that again?";
+            String retryMsg = "ja".equals(baseLanguage)
+                ? "聞こえなかったよ。もう一回言ってくれる？"
+                : "I can't hear you. Could you say that again?";
             statusServer.update("lastSotaText", retryMsg);
             speechManager.speak(retryMsg);
             CRobotUtil.wait(200);
@@ -687,14 +885,7 @@ public class WhisperInteraction {
         silenceRetryCount = 0;
         statusServer.update("silenceRetries", Integer.valueOf(0));
         lastWhisperResult = result;
-        lastDetectedLang = result.language;
-
-        // Update detected language on profile
-        if (currentUser != null && (currentUser.detectedLanguage.isEmpty()
-                || !currentUser.detectedLanguage.equals(result.language))) {
-            currentUser.detectedLanguage = result.language;
-            currentUser.preferredLanguage = result.language;
-        }
+        recordDetectedLanguage(result.language);
 
         // Update status
         statusServer.update("lastUserText", result.text);
@@ -704,11 +895,11 @@ public class WhisperInteraction {
         log("Heard [" + result.language + "]: " + result.text);
 
         // Add to conversation history
-        conversationHistory.add(LlamaClient.jsonMessage("user", result.textEn));
+        conversationHistory.add(LlamaClient.jsonMessage("user", getUserMessageForLlm(result)));
         trimHistory();
 
         // Check for goodbye
-        if (isGoodbye(result.textEn)) {
+        if (isGoodbye(result)) {
             log("Goodbye detected");
             currentState = STATE_CLOSING;
             updateState(STATE_CLOSING);
@@ -744,12 +935,14 @@ public class WhisperInteraction {
         if (conversationHistory.size() > 1) {
             llmResult = llamaClient.chatMultiTurn(systemPrompt, conversationHistory);
         } else {
-            llmResult = llamaClient.chat(systemPrompt, lastWhisperResult.textEn);
+            llmResult = llamaClient.chat(systemPrompt, getUserMessageForLlm(lastWhisperResult));
         }
 
         if (llmResult.isError()) {
             log("LLM error: " + llmResult.response);
-            pendingLLMResponse = "Sorry, I had trouble thinking about that.";
+            pendingLLMResponse = "ja".equals(baseLanguage)
+                ? "ごめんね、うまく考えられなかった。"
+                : "Sorry, I had trouble thinking about that.";
         } else {
             pendingLLMResponse = llmResult.response;
             log("LLM response (" + String.format("%.0f", llmResult.totalMs) + "ms): "
@@ -784,8 +977,22 @@ public class WhisperInteraction {
         conversationTurn++;
         statusServer.update("turn", Integer.valueOf(conversationTurn));
 
-        if (conversationTurn >= MAX_CONVERSATION_TURNS) {
-            log("Max conversation turns reached (" + MAX_CONVERSATION_TURNS + ")");
+        // Check if user is still present (face detection)
+        int noFaceCount = 0;
+        for (int i = 0; i < FACE_GONE_THRESHOLD; i++) {
+            FaceDetectResult faceCheck = camera.getDetectResult();
+            if (faceCheck != null && faceCheck.isDetect()) {
+                noFaceCount = 0;
+                break;
+            }
+            noFaceCount++;
+            if (i < FACE_GONE_THRESHOLD - 1) {
+                CRobotUtil.wait(500);
+            }
+        }
+
+        if (noFaceCount >= FACE_GONE_THRESHOLD) {
+            log("User left (no face detected " + FACE_GONE_THRESHOLD + " times). Closing.");
             currentState = STATE_CLOSING;
             updateState(STATE_CLOSING);
             return;
@@ -812,17 +1019,17 @@ public class WhisperInteraction {
             log("Profile updated: " + currentUser);
         }
 
-        // Personalized goodbye
+        // Personalized goodbye — use baseLanguage
         String goodbye;
         if (currentUser != null && !currentUser.name.isEmpty()) {
-            if ("ja".equals(lastDetectedLang)) {
-                goodbye = currentUser.name + "さん、楽しかったよ！またね！";
+            if ("ja".equals(baseLanguage)) {
+                goodbye = currentUser.name + "さん、楽しかったよ。またね。";
             } else {
                 goodbye = "It was great talking to you, " + currentUser.name + "! See you next time!";
             }
         } else {
-            if ("ja".equals(lastDetectedLang)) {
-                goodbye = "楽しかったよ！またね！";
+            if ("ja".equals(baseLanguage)) {
+                goodbye = "楽しかったよ。またね。";
             } else {
                 goodbye = "It was nice talking to you! See you later!";
             }
@@ -905,6 +1112,10 @@ public class WhisperInteraction {
 
             if (!currentUser.origin.isEmpty()) {
                 sb.append(currentUser.name).append(" is from ").append(currentUser.origin).append(". ");
+                sb.append("Always address them by name. ");
+                sb.append("Be culturally aware of their background from ")
+                  .append(currentUser.origin)
+                  .append(" — naturally reference their culture, food, customs, or home country in conversation when relevant. ");
             }
 
             if (!noMemory) {
@@ -916,26 +1127,35 @@ public class WhisperInteraction {
                 if (!currentUser.shortMemorySummary.isEmpty()) {
                     sb.append("Previous conversations: ").append(currentUser.shortMemorySummary).append(" ");
                 }
+                sb.append("You remember this person. Use their name throughout the conversation. ");
             } else {
                 // NO-REMEMBER: act as if first meeting
                 sb.append("This is your first time meeting this person. ");
             }
         }
 
-        // Language instructions
-        sb.append("The user spoke in ").append(langName);
-        sb.append(" (detected: ").append(lastDetectedLang).append("). ");
-        sb.append("IMPORTANT: You can ONLY speak Japanese or English (robot TTS limitation). ");
-
-        if ("ja".equals(lastDetectedLang)) {
-            sb.append("The user spoke Japanese, so respond in Japanese. ");
+        // Language instructions — use baseLanguage (set by GUI or CLI, never auto-switched)
+        if ("ja".equals(baseLanguage)) {
+            sb.append("You MUST respond ENTIRELY in Japanese (日本語). ");
+            sb.append("Do NOT mix English words or phrases into your response. ");
+            sb.append("Use natural, casual Japanese appropriate for friendly conversation. ");
         } else {
-            sb.append("Respond in English. ");
+            sb.append("You MUST respond ENTIRELY in English. ");
+            sb.append("Do NOT mix other languages into your response. ");
+        }
+        sb.append("The robot TTS only supports Japanese and English. ");
+
+        if (lastDetectedLang != null && !lastDetectedLang.equals(baseLanguage)
+                && !"en".equals(lastDetectedLang)) {
+            sb.append("The user spoke in ").append(getLanguageName(lastDetectedLang));
+            sb.append(" but you must still reply in ")
+              .append("ja".equals(baseLanguage) ? "Japanese" : "English")
+              .append(". ");
         }
 
         sb.append("Keep your response under 2 sentences. ");
         sb.append("Be warm, friendly, and natural. ");
-        sb.append("Show genuine interest in the user's culture and background.");
+        sb.append("Show genuine interest in the user and maintain cultural awareness throughout the conversation.");
 
         return sb.toString();
     }
@@ -1056,7 +1276,7 @@ public class WhisperInteraction {
             log("DeepFace: Sending " + (jpegBytes.length / 1024) + " KB for analysis...");
             DeepFaceClient.FaceAnalysisResult result = deepFaceClient.analyzeRace(jpegBytes);
 
-            if (result.ok && result.confidence >= 40) {
+            if (result.ok && result.confidence >= 30) {
                 String guessedOrigin = raceToGuessedOrigin(result.dominantRace);
                 if (guessedOrigin != null) {
                     currentUser.origin = guessedOrigin;
@@ -1078,107 +1298,135 @@ public class WhisperInteraction {
     }
 
     /**
-     * Convert FaceDetectResult raw image to JPEG bytes.
-     * The camera returns raw BGR pixel data from OpenCV Mat.
-     * Uses OpenCV imencode for conversion, with ImageIO fallback.
+     * Capture current camera frame as JPEG bytes.
+     * Uses getRawImage() + OpenCV imencode, or returns raw if already JPEG.
      */
     private byte[] toJpeg(FaceDetectResult result) {
         if (result == null) return null;
 
-        byte[] raw = null;
         try {
-            raw = result.getRawImage();
-        } catch (Exception e) {
-            log("WARN: getRawImage() failed: " + e.getMessage());
-            return null;
-        }
+            byte[] raw = result.getRawImage();
+            if (raw != null && raw.length > 2) {
+                // Check if already JPEG
+                if ((raw[0] & 0xFF) == 0xFF && (raw[1] & 0xFF) == 0xD8) {
+                    log("toJpeg: Raw is already JPEG (" + raw.length + " bytes)");
+                    return raw;
+                }
 
-        if (raw == null || raw.length == 0) return null;
-
-        // Check if already JPEG (magic bytes: FF D8)
-        if (raw.length > 2
-                && (raw[0] & 0xFF) == 0xFF
-                && (raw[1] & 0xFF) == 0xD8) {
-            return raw;
-        }
-
-        // Try encoding raw BGR pixel data using OpenCV
-        try {
-            int[][] knownSizes = {
-                {640, 480}, {320, 240}, {1280, 720},
-                {1920, 1080}, {800, 600}, {1024, 768},
-            };
-
-            for (int s = 0; s < knownSizes.length; s++) {
-                int w = knownSizes[s][0], h = knownSizes[s][1];
-                if (raw.length == w * h * 3) {
-                    Mat mat = new Mat(h, w, CvType.CV_8UC3);
+                // Try common resolutions: RGB (3ch) and grayscale (1ch)
+                int[][] sizes = {{640, 480}, {320, 240}, {1280, 720}};
+                for (int s = 0; s < sizes.length; s++) {
+                    int w = sizes[s][0], h = sizes[s][1];
+                    int cvType;
+                    if (raw.length == w * h * 3) {
+                        cvType = CvType.CV_8UC3;
+                    } else if (raw.length == w * h) {
+                        cvType = CvType.CV_8UC1; // grayscale
+                    } else {
+                        continue;
+                    }
+                    Mat mat = new Mat(h, w, cvType);
                     mat.put(0, 0, raw);
                     MatOfByte buf = new MatOfByte();
                     Imgcodecs.imencode(".jpg", mat, buf);
                     byte[] jpg = buf.toArray();
                     mat.release();
                     buf.release();
+                    String ch = (cvType == CvType.CV_8UC1) ? "gray" : "rgb";
+                    log("toJpeg: OpenCV encode OK (" + w + "x" + h + " " + ch + ", " + jpg.length + " bytes)");
                     return jpg;
                 }
-            }
-
-            // Try as grayscale
-            for (int s = 0; s < knownSizes.length; s++) {
-                int w = knownSizes[s][0], h = knownSizes[s][1];
-                if (raw.length == w * h) {
-                    Mat mat = new Mat(h, w, CvType.CV_8UC1);
-                    mat.put(0, 0, raw);
-                    MatOfByte buf = new MatOfByte();
-                    Imgcodecs.imencode(".jpg", mat, buf);
-                    byte[] jpg = buf.toArray();
-                    mat.release();
-                    buf.release();
-                    return jpg;
-                }
-            }
-
-            log("WARN: Raw image size " + raw.length + " doesn't match any known resolution");
-        } catch (Exception e) {
-            log("WARN: OpenCV encode failed: " + e.getMessage());
-        }
-
-        // Fallback: try ImageIO decode
-        try {
-            BufferedImage img = ImageIO.read(new ByteArrayInputStream(raw));
-            if (img != null) {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ImageIO.write(img, "jpg", bos);
-                return bos.toByteArray();
+                log("toJpeg: Raw size " + raw.length + " bytes, no matching resolution");
             }
         } catch (Exception e) {
-            // Not a standard image format
+            log("toJpeg: getRawImage/OpenCV failed: " + e.getMessage());
         }
 
-        log("WARN: Could not convert raw image (" + raw.length + " bytes) to JPEG");
+        log("WARN: Could not capture JPEG from camera");
         return null;
     }
 
-    /** Map DeepFace race label to a guessed origin for greeting. */
+    /** Map DeepFace race label to a guessed origin for greeting (language-aware). */
     private String raceToGuessedOrigin(String race) {
         if (race == null) return null;
         String lower = race.toLowerCase().trim();
-        if ("asian".equals(lower))                       return "Asia";
-        if ("white".equals(lower))                       return "Europe or America";
-        if ("middle eastern".equals(lower))              return "the Middle East";
-        if ("indian".equals(lower))                      return "South Asia";
-        if ("latino hispanic".equals(lower))             return "Latin America";
-        if ("black".equals(lower))                       return "Africa or America";
+        if ("ja".equals(baseLanguage)) {
+            if ("asian".equals(lower))              return "\u30a2\u30b8\u30a2";
+            if ("white".equals(lower))              return "\u30e8\u30fc\u30ed\u30c3\u30d1\u3084\u30a2\u30e1\u30ea\u30ab";
+            if ("middle eastern".equals(lower))     return "\u4e2d\u6771";
+            if ("indian".equals(lower))             return "\u5357\u30a2\u30b8\u30a2";
+            if ("latino hispanic".equals(lower))    return "\u30e9\u30c6\u30f3\u30a2\u30e1\u30ea\u30ab";
+            if ("black".equals(lower))              return "\u30a2\u30d5\u30ea\u30ab\u3084\u30a2\u30e1\u30ea\u30ab";
+        } else {
+            if ("asian".equals(lower))              return "Asia";
+            if ("white".equals(lower))              return "Europe or America";
+            if ("middle eastern".equals(lower))     return "the Middle East";
+            if ("indian".equals(lower))             return "South Asia";
+            if ("latino hispanic".equals(lower))    return "Latin America";
+            if ("black".equals(lower))              return "Africa or America";
+        }
         return null;
     }
 
+    /** Translate English country name to Japanese for TTS (JA mode only). */
+    private String localizeCountryName(String country) {
+        if (!"ja".equals(baseLanguage) || country == null) return country;
+        if ("Japan".equals(country))           return "\u65e5\u672c";
+        if ("China".equals(country))           return "\u4e2d\u56fd";
+        if ("Korea".equals(country))           return "\u97d3\u56fd";
+        if ("Indonesia".equals(country))       return "\u30a4\u30f3\u30c9\u30cd\u30b7\u30a2";
+        if ("Malaysia".equals(country))        return "\u30de\u30ec\u30fc\u30b7\u30a2";
+        if ("Thailand".equals(country))        return "\u30bf\u30a4";
+        if ("Vietnam".equals(country))         return "\u30d9\u30c8\u30ca\u30e0";
+        if ("India".equals(country))           return "\u30a4\u30f3\u30c9";
+        if ("the Middle East".equals(country)) return "\u4e2d\u6771";
+        if ("France".equals(country))          return "\u30d5\u30e9\u30f3\u30b9";
+        if ("Germany".equals(country))         return "\u30c9\u30a4\u30c4";
+        if ("Spain".equals(country))           return "\u30b9\u30da\u30a4\u30f3";
+        if ("Brazil".equals(country))          return "\u30d6\u30e9\u30b8\u30eb";
+        if ("Russia".equals(country))          return "\u30ed\u30b7\u30a2";
+        if ("Italy".equals(country))           return "\u30a4\u30bf\u30ea\u30a2";
+        if ("the Netherlands".equals(country)) return "\u30aa\u30e9\u30f3\u30c0";
+        if ("Turkey".equals(country))          return "\u30c8\u30eb\u30b3";
+        if ("Poland".equals(country))          return "\u30dd\u30fc\u30e9\u30f3\u30c9";
+        if ("Sweden".equals(country))          return "\u30b9\u30a6\u30a7\u30fc\u30c7\u30f3";
+        if ("Finland".equals(country))         return "\u30d5\u30a3\u30f3\u30e9\u30f3\u30c9";
+        return country;
+    }
+
     /** Extract origin from user response text (English translation). */
-    private String extractOrigin(String textEn) {
-        if (textEn == null || textEn.isEmpty()) return "";
+    private String extractOrigin(String text) {
+        if (text == null || text.isEmpty()) return "";
 
-        String lower = textEn.toLowerCase().trim();
+        String trimmed = text.trim();
 
-        // Remove common prefixes
+        // Japanese patterns: "日本から来ました", "インドネシアです", "中国から", etc.
+        String[] jaFromSuffixes = {"から来ました", "からきました", "から来た", "からきた",
+                                   "からです", "から", "出身です", "出身"};
+        for (int i = 0; i < jaFromSuffixes.length; i++) {
+            if (trimmed.endsWith(jaFromSuffixes[i])) {
+                String origin = trimmed.substring(0, trimmed.length() - jaFromSuffixes[i].length()).trim();
+                // Strip leading Japanese filler: "えっと", "あの"
+                String[] jaLeads = {"えっと", "あの", "えーと", "うーん"};
+                for (int j = 0; j < jaLeads.length; j++) {
+                    if (origin.startsWith(jaLeads[j])) {
+                        origin = origin.substring(jaLeads[j].length()).trim();
+                        break;
+                    }
+                }
+                if (!origin.isEmpty()) return origin;
+            }
+        }
+        // Japanese country name ending with "です"
+        if (trimmed.endsWith("です") || trimmed.endsWith("だよ")) {
+            String suffix = trimmed.endsWith("です") ? "です" : "だよ";
+            String maybe = trimmed.substring(0, trimmed.length() - suffix.length()).trim();
+            // Only use if short (likely a country name, not a sentence)
+            if (maybe.length() <= 10) return maybe;
+        }
+
+        // English patterns
+        String lower = trimmed.toLowerCase();
         String[] prefixes = {
             "i'm from ", "i am from ", "i come from ", "i came from ",
             "from ", "it's ", "it is "
@@ -1186,18 +1434,26 @@ public class WhisperInteraction {
         String cleaned = lower;
         for (int i = 0; i < prefixes.length; i++) {
             if (lower.startsWith(prefixes[i])) {
-                cleaned = textEn.trim().substring(prefixes[i].length()).trim();
+                cleaned = trimmed.substring(prefixes[i].length()).trim();
                 break;
             }
         }
 
         // Remove trailing punctuation
-        if (cleaned.endsWith(".") || cleaned.endsWith(",") || cleaned.endsWith("!")) {
-            cleaned = cleaned.substring(0, cleaned.length() - 1).trim();
+        while (cleaned.length() > 0) {
+            char last = cleaned.charAt(cleaned.length() - 1);
+            if (last == '.' || last == ',' || last == '!' || last == '?' || last == '。') {
+                cleaned = cleaned.substring(0, cleaned.length() - 1).trim();
+            } else {
+                break;
+            }
         }
 
-        // Capitalize first letter
-        if (!cleaned.isEmpty()) {
+        // Sanity: if result is too long, it's probably not a country name
+        if (cleaned.length() > 30) return "";
+
+        // Capitalize first letter (for English)
+        if (!cleaned.isEmpty() && cleaned.charAt(0) >= 'a' && cleaned.charAt(0) <= 'z') {
             cleaned = cleaned.substring(0, 1).toUpperCase() + cleaned.substring(1);
         }
 
@@ -1218,6 +1474,19 @@ public class WhisperInteraction {
                 if (next == '"')  { sb.append('"'); i++; }
                 else if (next == '\\') { sb.append('\\'); i++; }
                 else if (next == 'n')  { sb.append('\n'); i++; }
+                else if (next == 'r')  { sb.append('\r'); i++; }
+                else if (next == 't')  { sb.append('\t'); i++; }
+                else if (next == 'u' && i + 5 < json.length()) {
+                    String hex = json.substring(i + 2, i + 6);
+                    try {
+                        int code = Integer.parseInt(hex, 16);
+                        sb.append((char) code);
+                        i += 5;
+                    } catch (NumberFormatException e) {
+                        sb.append("\\u").append(hex);
+                        i += 5;
+                    }
+                }
                 else { sb.append(c); }
             } else if (c == '"') {
                 break;
@@ -1241,6 +1510,109 @@ public class WhisperInteraction {
             if (lower.contains(goodbyePhrases[i])) return true;
         }
         return false;
+    }
+
+    private boolean isGoodbye(WhisperSTT.WhisperResult result) {
+        if (result == null) return false;
+
+        // English farewell detection (works on translated text too).
+        if (isGoodbye(result.textEn)) return true;
+
+        // Multilingual farewell detection on original text.
+        String text = result.text == null ? "" : result.text.trim();
+        if (text.isEmpty()) return false;
+
+        // Japanese
+        String[] jaGoodbye = {
+            "\u3055\u3088\u3046\u306a\u3089",   // さようなら
+            "\u30d0\u30a4\u30d0\u30a4",           // バイバイ
+            "\u307e\u305f\u306d",                   // またね
+            "\u3058\u3083\u3042\u306d",           // じゃあね
+            "\u5931\u793c\u3057\u307e\u3059",     // 失礼します
+            "\u304a\u3084\u3059\u307f",           // おやすみ
+            "\u3058\u3083\u306d",                   // じゃね
+            "\u3058\u3083\u307e\u305f"             // じゃまた
+        };
+        // Korean
+        String[] koGoodbye = {
+            "\uc548\ub155\ud788 \uac00\uc138\uc694",  // 안녕히 가세요
+            "\uc548\ub155",                              // 안녕
+            "\ub610 \ubd10\uc694",                      // 또 봐요
+            "\ubc14\uc774\ubc14\uc774"                  // 바이바이
+        };
+        // Chinese
+        String[] zhGoodbye = {
+            "\u518d\u89c1",       // 再见
+            "\u62dc\u62dc",       // 拜拜
+            "\u56de\u89c1",       // 回见
+            "\u518d\u4f1a"        // 再会
+        };
+        // Indonesian/Malay
+        String[] idGoodbye = {
+            "selamat tinggal", "sampai jumpa", "dadah", "bye"
+        };
+
+        String[][] allGoodbye = {jaGoodbye, koGoodbye, zhGoodbye, idGoodbye};
+        for (int g = 0; g < allGoodbye.length; g++) {
+            for (int i = 0; i < allGoodbye[g].length; i++) {
+                if (text.contains(allGoodbye[g][i])) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Choose which Whisper text to send to the LLM based on baseLanguage.
+     * - JA mode: always send original text (Whisper English translation of Japanese is unreliable)
+     * - EN mode: prefer English translation, fall back to original
+     * - For non-JA/non-EN speakers: send both original + English so LLM can understand
+     */
+    private String getUserMessageForLlm(WhisperSTT.WhisperResult result) {
+        if (result == null) return "";
+
+        String original = (result.text != null) ? result.text.trim() : "";
+        String english  = (result.textEn != null) ? result.textEn.trim() : "";
+
+        if ("ja".equals(baseLanguage)) {
+            // JA mode: always use original text (works for Japanese speakers,
+            // and for non-Japanese speakers Whisper still transcribes something usable)
+            return !original.isEmpty() ? original : english;
+        }
+
+        // EN mode: prefer English translation
+        if (!english.isEmpty()) return english;
+        return original;
+    }
+
+    /**
+     * Record detected language on the user profile — but do NOT auto-switch baseLanguage.
+     * baseLanguage is only changed via CLI flag (--language) or GUI (POST /set_language).
+     * Auto-switching caused "Japanglish": one English word in JA mode would flip the
+     * entire robot to EN, then back to JA on the next utterance, creating mixed output.
+     */
+    private void recordDetectedLanguage(String detectedLang) {
+        if (detectedLang == null || detectedLang.isEmpty()) return;
+        lastDetectedLang = detectedLang;
+        if (currentUser != null) {
+            currentUser.detectedLanguage = detectedLang;
+            if (currentUser.preferredLanguage.isEmpty()) {
+                currentUser.preferredLanguage = detectedLang;
+            }
+        }
+    }
+
+    /**
+     * Always request English translation from Whisper.
+     * Even in JA mode, we need the English text for:
+     *   - Goodbye detection (English farewell phrases)
+     *   - Hallucination filtering (English pattern matching)
+     *   - Logging and GUI display
+     * In EN mode: always translate (non-English speakers need translation).
+     * In JA mode: skip translation to halve Whisper latency (~3-5s saved).
+     *   JA goodbye patterns and origin extraction handle Japanese directly.
+     */
+    private boolean shouldTranslateForCurrentMode() {
+        return "en".equals(baseLanguage);
     }
 
     private String getLanguageName(String code) {

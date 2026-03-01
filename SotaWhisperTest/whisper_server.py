@@ -14,6 +14,20 @@ Models are loaded once at startup (not per-request).
 Listens on 0.0.0.0:5050 so Sota can reach it over WiFi.
 """
 
+import sys
+import io
+
+# Fix Windows console encoding for non-ASCII (Japanese, etc.)
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace",
+        line_buffering=True, write_through=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", errors="replace",
+        line_buffering=True, write_through=True
+    )
+
 import whisper
 import torch
 import flask
@@ -36,9 +50,11 @@ except ImportError:
 # --- Configuration ---
 WHISPER_MODEL = "base"   # Change to "small" for better accuracy
 PORT = 5050
+SERVER_BUILD = "2026-03-01-utf8fix-v3"
 
 # --- Load model at startup ---
 print("[Whisper Server] Loading model '{}'...".format(WHISPER_MODEL))
+print("[Whisper Server] Build: {}".format(SERVER_BUILD))
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("[Whisper Server] Device: {}".format(device))
 if device == "cpu":
@@ -52,10 +68,19 @@ print("[Whisper Server] Starting on port {}...".format(PORT))
 app = flask.Flask(__name__)
 
 
+def _to_py_float(value, default=0.0):
+    """Convert numpy/torch scalar types to plain Python float for JSON safety."""
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return flask.jsonify({
         "status": "ok",
+        "build": SERVER_BUILD,
         "model": WHISPER_MODEL,
         "device": device,
         "deepface": DEEPFACE_AVAILABLE
@@ -115,9 +140,9 @@ def transcribe():
 
         # Step 1: Transcribe (original language)
         if language:
-            result = model.transcribe(tmp_path, language=language)
+            result = model.transcribe(tmp_path, language=language, verbose=False)
         else:
-            result = model.transcribe(tmp_path)
+            result = model.transcribe(tmp_path, verbose=False)
 
         text = result.get("text", "").strip()
         lang = result.get("language", "")
@@ -125,14 +150,20 @@ def transcribe():
         # Step 2: Translate to English (if requested and not already English)
         text_en = text  # default: same as original
         if do_translate and lang and lang != "en":
-            result_en = model.transcribe(tmp_path, task="translate")
-            text_en = result_en.get("text", "").strip()
+            try:
+                result_en = model.transcribe(tmp_path, task="translate", verbose=False)
+                text_en = result_en.get("text", "").strip()
+            except Exception as translate_err:
+                # Keep request successful even if translation step fails.
+                print("[Whisper Server] WARN: translate failed: {}".format(repr(translate_err)))
+                text_en = text
 
         t1 = time.time()
         processing_ms = int((t1 - t0) * 1000)
 
-        print("[Whisper Server] Result: lang={}, text='{}', text_en='{}', {}ms".format(
-            lang, text[:60], text_en[:60], processing_ms
+        # Use ASCII-safe repr for logging (avoids charmap encoding errors on Windows)
+        print("[Whisper Server] Result: lang={}, text={}, text_en={}, {}ms".format(
+            lang, repr(text[:60]), repr(text_en[:60]), processing_ms
         ))
 
         return flask.jsonify({
@@ -144,12 +175,13 @@ def transcribe():
         })
 
     except Exception as e:
-        print("[Whisper Server] ERROR: {}".format(str(e)))
+        err_msg = repr(e)  # repr() is always ASCII-safe
+        print("[Whisper Server] ERROR: {}".format(err_msg))
         return flask.jsonify({
             "ok": False,
             "text": "",
             "language": "",
-            "error": str(e)
+            "error": err_msg
         }), 500
 
     finally:
@@ -186,12 +218,22 @@ def analyze_face():
         print("[DeepFace] Analyzing face ({} x {})...".format(img.width, img.height))
         t0 = time.time()
 
-        result = DeepFace.analyze(
-            face_arr,
-            actions=["race"],
-            enforce_detection=False,
-            silent=True
-        )
+        # Prefer path-based API for broader DeepFace version compatibility.
+        try:
+            result = DeepFace.analyze(
+                img_path=tmp_path,
+                actions=["race"],
+                enforce_detection=False,
+                silent=True
+            )
+        except TypeError:
+            # Fallback for builds that only accept ndarray as first positional arg.
+            result = DeepFace.analyze(
+                face_arr,
+                actions=["race"],
+                enforce_detection=False,
+                silent=True
+            )
         t1 = time.time()
         processing_ms = int((t1 - t0) * 1000)
 
@@ -199,8 +241,12 @@ def analyze_face():
             result = result[0]
 
         dominant = result.get("dominant_race", "")
-        scores = result.get("race", {})
-        confidence = int(scores.get(dominant, 0))
+        scores_raw = result.get("race", {})
+        scores = {}
+        if isinstance(scores_raw, dict):
+            for k, v in scores_raw.items():
+                scores[str(k)] = _to_py_float(v, 0.0)
+        confidence = int(_to_py_float(scores.get(dominant, 0), 0.0))
 
         print("[DeepFace] Result: {} ({}%), {}ms".format(dominant, confidence, processing_ms))
 
@@ -213,8 +259,16 @@ def analyze_face():
         })
 
     except Exception as e:
-        print("[DeepFace] ERROR: {}".format(str(e)))
-        return flask.jsonify({"ok": False, "error": str(e)}), 500
+        # Keep interaction running even when DeepFace fails.
+        print("[DeepFace] ERROR: {}".format(repr(e)))
+        return flask.jsonify({
+            "ok": False,
+            "dominant_race": "",
+            "confidence": 0,
+            "all_races": {},
+            "processing_ms": 0,
+            "error": repr(e)
+        }), 200
 
     finally:
         try:

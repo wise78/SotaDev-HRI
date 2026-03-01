@@ -199,6 +199,18 @@ public class LlamaClient {
                 else if (next == 'n')  { sb.append('\n'); i++; }
                 else if (next == 't')  { sb.append('\t'); i++; }
                 else if (next == 'r')  { sb.append('\r'); i++; }
+                else if (next == 'u' && i + 5 < json.length()) {
+                    // Decode JSON Unicode escape (e.g., \u3053 -> こ)
+                    String hex = json.substring(i + 2, i + 6);
+                    try {
+                        int code = Integer.parseInt(hex, 16);
+                        sb.append((char) code);
+                        i += 5;
+                    } catch (NumberFormatException e) {
+                        sb.append("\\u").append(hex);
+                        i += 5;
+                    }
+                }
                 else { sb.append(c); }
             } else if (c == '"') {
                 break;

@@ -284,9 +284,25 @@
 			<param name="jar.name" value="SotaWhisperTest/interaction/run_interaction.sh"/>
 			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
 		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/interaction/start_novice.sh"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/interaction/start_remember.sh"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/interaction/start_no_remember.sh"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
+		<antcall target="send_edison_file">
+			<param name="jar.name" value="SotaWhisperTest/interaction/reset_memory.sh"/>
+			<param name="to.path" value="${scp.senddir_edison}SotaWhisperTest"/>
+		</antcall>
 		<sshexec host="${scp.server}"
 			username="${scp.edison.user}" password="${scp.edison.pass}"
-			command="sed -i 's/\r$//' /home/root/SotaWhisperTest/run_interaction.sh &amp;&amp; chmod +x /home/root/SotaWhisperTest/run_interaction.sh"
+			command="sed -i 's/\r$//' /home/root/SotaWhisperTest/*.sh &amp;&amp; chmod +x /home/root/SotaWhisperTest/*.sh"
 			trust="yes"/>
 		<echo>WhisperInteraction deployed! On robot: cd /home/root/SotaWhisperTest &amp;&amp; ./run_interaction.sh LAPTOP_IP</echo>
 	</target>

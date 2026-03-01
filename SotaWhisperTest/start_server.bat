@@ -15,6 +15,10 @@ IF NOT EXIST "%VENV_ACTIVATE%" (
 )
 
 call "%VENV_ACTIVATE%"
+chcp 65001 >nul
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
+set PYTHONUNBUFFERED=1
 
 echo.
 echo ============================================================

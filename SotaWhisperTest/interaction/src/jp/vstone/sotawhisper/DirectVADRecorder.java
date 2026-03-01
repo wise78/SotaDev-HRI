@@ -34,7 +34,7 @@ public class DirectVADRecorder {
     private static final boolean BIG_ENDIAN  = false;
 
     // VAD parameters
-    private static final int DEFAULT_SILENCE_THRESHOLD = 300;
+    private static final int DEFAULT_SILENCE_THRESHOLD = 150;
     private static final int DEFAULT_SILENCE_HOLD_MS   = 2500;
     private static final int DEFAULT_MAX_RECORDING_MS  = 15000;
     private static final int POLL_INTERVAL_MS          = 100;

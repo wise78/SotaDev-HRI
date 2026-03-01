@@ -454,6 +454,25 @@ class ResearchGUI:
             lbl.pack(side="left", padx=4)
             self.conv_vars[key] = var
 
+        # Language switch row
+        lang_row = ttk.Frame(frame)
+        lang_row.pack(fill="x", pady=(6, 2))
+
+        ttk.Label(lang_row, text="Response Language:",
+                  font=("Consolas", 10)).pack(side="left")
+        self.lang_var = tk.StringVar(value="en")
+        self.lang_label = tk.Label(lang_row, text=" ENGLISH ",
+                                    font=("Consolas", 10, "bold"),
+                                    bg="#1565C0", fg="white", padx=6, pady=2)
+        self.lang_label.pack(side="left", padx=(4, 8))
+
+        self.lang_en_btn = ttk.Button(lang_row, text="English",
+                                       command=lambda: self._set_language("en"))
+        self.lang_en_btn.pack(side="left", padx=2)
+        self.lang_ja_btn = ttk.Button(lang_row, text="Japanese",
+                                       command=lambda: self._set_language("ja"))
+        self.lang_ja_btn.pack(side="left", padx=2)
+
         # User profile
         profile_row = ttk.Frame(frame)
         profile_row.pack(fill="x", pady=(4, 0))
@@ -617,6 +636,40 @@ class ResearchGUI:
     # Connection
     # ================================================================
 
+    def _set_language(self, lang):
+        """Send language change to robot via POST /set_language."""
+        if not self.connected:
+            messagebox.showwarning("Not Connected",
+                                    "Connect to robot first.")
+            return
+
+        def do_set():
+            url = "http://{}:{}/set_language".format(self.robot_ip, self.status_port)
+            body = '{{"language":"{}"}}'.format(lang).encode("utf-8")
+            try:
+                req = Request(url, data=body)
+                req.add_header("Content-Type", "application/json")
+                req.get_method = lambda: "POST"
+                resp = urlopen(req, timeout=3)
+                resp.read()
+                self.root.after(0, lambda: self._on_language_set(lang))
+            except Exception as e:
+                self.root.after(0, lambda: self._log(
+                    "Language change failed: {}".format(str(e))))
+
+        threading.Thread(target=do_set, daemon=True).start()
+
+    def _on_language_set(self, lang):
+        self.lang_var.set(lang)
+        if lang == "ja":
+            self.lang_label.config(text=" JAPANESE ", bg="#C62828")
+        else:
+            self.lang_label.config(text=" ENGLISH ", bg="#1565C0")
+        self._log("Language set to: {}".format(lang.upper()))
+        if self.session_active:
+            self._append_conv_log("system",
+                                   "[Language changed to {}]".format(lang.upper()))
+
     def _toggle_connect(self):
         if self.polling:
             self._disconnect()
@@ -708,8 +761,11 @@ class ResearchGUI:
 
         # Turn / Silence
         turn = data.get("turn", 0)
-        max_turns = data.get("maxTurns", 8)
-        self.turn_var.set("{}/{}".format(turn, max_turns))
+        max_turns = data.get("maxTurns", 0)
+        if max_turns > 0:
+            self.turn_var.set("{}/{}".format(turn, max_turns))
+        else:
+            self.turn_var.set(str(turn))
         self.silence_var.set(str(data.get("silenceRetries", 0)))
 
         # VAD
@@ -771,6 +827,15 @@ class ResearchGUI:
                                ["bye", "goodbye", "see you", "sayonara",
                                 "mata ne", "sampai jumpa"])
                 self.logger.mark_goodbye(user_bye)
+
+        # Language indicator from robot
+        base_lang = data.get("baseLanguage", "en") or "en"
+        if base_lang != self.lang_var.get():
+            self.lang_var.set(base_lang)
+            if base_lang == "ja":
+                self.lang_label.config(text=" JAPANESE ", bg="#C62828")
+            else:
+                self.lang_label.config(text=" ENGLISH ", bg="#1565C0")
 
         # User profile
         name = data.get("userName", "") or ""

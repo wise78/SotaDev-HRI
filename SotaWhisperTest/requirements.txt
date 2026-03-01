@@ -3,3 +3,7 @@ torchaudio
 openai-whisper
 flask
 pyttsx3
+numpy
+pillow
+deepface
+tf-keras

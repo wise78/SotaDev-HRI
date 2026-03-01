@@ -33,6 +33,12 @@ public class StatusServer {
     private volatile boolean running = false;
     private final long startTime;
     private volatile UserMemory userMemory;  // optional, set after init
+    private volatile LanguageChangeListener languageListener;  // callback for language changes
+
+    /** Listener interface for runtime language changes from GUI. */
+    public interface LanguageChangeListener {
+        void onLanguageChanged(String lang);
+    }
 
     public StatusServer(int port) {
         this.port = port;
@@ -59,6 +65,11 @@ public class StatusServer {
     /** Set user memory reference for /memory endpoint. */
     public void setUserMemory(UserMemory memory) {
         this.userMemory = memory;
+    }
+
+    /** Set listener for runtime language changes from GUI. */
+    public void setLanguageChangeListener(LanguageChangeListener listener) {
+        this.languageListener = listener;
     }
 
     /** Update a status field. Thread-safe. */
@@ -151,19 +162,23 @@ public class StatusServer {
             }
 
             String requestLine = line.toString();
+            String method = "";
             String path = "/";
-            if (requestLine.startsWith("GET ")) {
-                int spaceIdx = requestLine.indexOf(' ', 4);
-                if (spaceIdx > 0) {
-                    path = requestLine.substring(4, spaceIdx);
+            int firstSpace = requestLine.indexOf(' ');
+            if (firstSpace > 0) {
+                method = requestLine.substring(0, firstSpace);
+                int secondSpace = requestLine.indexOf(' ', firstSpace + 1);
+                if (secondSpace > 0) {
+                    path = requestLine.substring(firstSpace + 1, secondSpace);
                 } else {
-                    path = requestLine.substring(4).trim();
+                    path = requestLine.substring(firstSpace + 1).trim();
                 }
             }
 
-            // Drain remaining headers (read until empty line)
+            // Drain remaining headers and capture Content-Length
             StringBuilder headerBuf = new StringBuilder();
             boolean lastWasNewline = false;
+            int contentLength = 0;
             while ((ch = is.read()) != -1) {
                 if (ch == '\n') {
                     if (lastWasNewline) break;
@@ -174,6 +189,28 @@ public class StatusServer {
                 headerBuf.append((char) ch);
                 if (headerBuf.length() > 4096) break;
             }
+            // Parse Content-Length from headers
+            String headers = headerBuf.toString().toLowerCase();
+            int clIdx = headers.indexOf("content-length:");
+            if (clIdx >= 0) {
+                int clEnd = headers.indexOf('\n', clIdx);
+                if (clEnd < 0) clEnd = headers.length();
+                String clVal = headers.substring(clIdx + 15, clEnd).trim();
+                try { contentLength = Integer.parseInt(clVal); } catch (Exception ignored) {}
+            }
+
+            // Read body for POST requests
+            String body = "";
+            if ("POST".equals(method) && contentLength > 0 && contentLength < 4096) {
+                byte[] bodyBytes = new byte[contentLength];
+                int read = 0;
+                while (read < contentLength) {
+                    int r = is.read(bodyBytes, read, contentLength - read);
+                    if (r < 0) break;
+                    read += r;
+                }
+                body = new String(bodyBytes, 0, read, "UTF-8");
+            }
 
             // Route
             String responseJson;
@@ -183,8 +220,10 @@ public class StatusServer {
                 responseJson = "{\"ok\":true}";
             } else if ("/memory".equals(path)) {
                 responseJson = buildMemoryJson();
+            } else if ("/set_language".equals(path) && "POST".equals(method)) {
+                responseJson = handleSetLanguage(body);
             } else {
-                responseJson = "{\"error\":\"Not found. Use /status, /health, or /memory\"}";
+                responseJson = "{\"error\":\"Not found. Use /status, /health, /memory, or POST /set_language\"}";
             }
 
             // CORS headers for browser access
@@ -246,6 +285,36 @@ public class StatusServer {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    /** Handle POST /set_language — expects body like {"language":"ja"} or just "ja" */
+    private String handleSetLanguage(String body) {
+        // Extract language from body (simple parsing, no JSON lib)
+        String lang = body.trim();
+        // Try to extract from JSON: {"language":"ja"}
+        int idx = lang.indexOf("\"language\"");
+        if (idx >= 0) {
+            int colon = lang.indexOf(':', idx);
+            if (colon >= 0) {
+                int start = lang.indexOf('"', colon + 1);
+                int end = lang.indexOf('"', start + 1);
+                if (start >= 0 && end > start) {
+                    lang = lang.substring(start + 1, end);
+                }
+            }
+        }
+        // Strip quotes if raw string
+        lang = lang.replace("\"", "").trim().toLowerCase();
+
+        if ("en".equals(lang) || "ja".equals(lang)) {
+            update("baseLanguage", lang);
+            log("Language changed to: " + lang);
+            if (languageListener != null) {
+                languageListener.onLanguageChanged(lang);
+            }
+            return "{\"ok\":true,\"language\":\"" + lang + "\"}";
+        }
+        return "{\"ok\":false,\"error\":\"Invalid language. Use 'en' or 'ja'.\"}";
     }
 
     private String buildMemoryJson() {

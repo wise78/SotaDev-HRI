@@ -32,4 +32,5 @@ echo ""
 
 cd "$JAR_DIR"
 exec env LD_LIBRARY_PATH="$OPENCV_LIB:$LD_LIBRARY_PATH" \
-    java -jar whisperinteraction.jar "$@" --status-port $STATUS_PORT
+    java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 \
+    -jar whisperinteraction.jar "$@" --status-port $STATUS_PORT
