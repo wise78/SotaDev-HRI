@@ -1,10 +1,20 @@
 package jp.vstone.sotawhisper;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
+
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import jp.vstone.RobotLib.CRobotMem;
 import jp.vstone.RobotLib.CRobotPose;
@@ -23,12 +33,21 @@ import jp.vstone.camera.FaceDetectLib.FaceUser;
  *   - Face recognition with user memory (name, origin, language, social state)
  *   - Culture/ethnicity inference from detected language
  *   - Multi-turn conversation with context
+ *   - DeepFace ethnicity detection for personalized greetings
+ *   - Sound effects on state transitions
  *   - Whisper STT with hallucination filtering
  *   - Embedded StatusServer for remote GUI monitoring
  *
  * Usage:
  *   java -jar whisperinteraction.jar <laptop_ip>
  *   java -jar whisperinteraction.jar <laptop_ip> --status-port 5051
+ *   java -jar whisperinteraction.jar <laptop_ip> --no-memory --participant-id P01 --group G1 --session 1
+ *
+ * Experiment flags:
+ *   --no-memory         Ignore stored profiles, always treat as new user (still saves)
+ *   --participant-id    Participant ID for research logging (e.g., P01)
+ *   --group             Group assignment: G1 or G2
+ *   --session           Session number: 1 or 2
  *
  * Java 1.8, no lambda.
  */
@@ -84,6 +103,7 @@ public class WhisperInteraction {
     private GestureManager        gestureManager;
     private StatusServer          statusServer;
     private UserMemory            userMemory;
+    private DeepFaceClient        deepFaceClient;
 
     // ----------------------------------------------------------------
     // Runtime state
@@ -106,14 +126,20 @@ public class WhisperInteraction {
     // Stored for status reporting
     private String laptopIp = "";
 
+    // Experiment flags
+    private boolean noMemory     = false;  // --no-memory: skip profile lookup
+    private String  participantId = "";    // --participant-id
+    private String  groupId       = "";    // --group (G1/G2)
+    private String  sessionNum    = "";    // --session (1/2)
+
     // ----------------------------------------------------------------
     // Main entry point
     // ----------------------------------------------------------------
 
     public static void main(String[] args) {
         System.out.println("========================================================");
-        System.out.println("  Sota Whisper Interaction v2");
-        System.out.println("  Face -> Recognize -> Greet -> Listen -> LLM -> Respond");
+        System.out.println("  Sota Whisper Interaction v3");
+        System.out.println("  Face -> DeepFace -> Recognize -> Greet -> Listen -> LLM -> Respond");
         System.out.println("========================================================");
         System.out.println();
 
@@ -125,6 +151,10 @@ public class WhisperInteraction {
             System.out.println("  --ollama-port <port>    Ollama server port (default: 11434)");
             System.out.println("  --model <name>          Ollama model name (default: llama3.2:3b)");
             System.out.println("  --status-port <port>    Status server port for GUI (default: 5051)");
+            System.out.println("  --no-memory             Ignore stored profiles (always new user)");
+            System.out.println("  --participant-id <id>   Participant ID (e.g., P01)");
+            System.out.println("  --group <g1|g2>         Group assignment");
+            System.out.println("  --session <1|2>         Session number");
             System.out.println();
             System.out.println("Example:");
             System.out.println("  java -jar whisperinteraction.jar 192.168.11.32");
@@ -137,6 +167,10 @@ public class WhisperInteraction {
         int    ollamaPort  = OLLAMA_PORT;
         String modelName   = OLLAMA_MODEL;
         int    statusPort  = STATUS_PORT;
+        boolean noMemoryFlag = false;
+        String pidFlag      = "";
+        String groupFlag    = "";
+        String sessionFlag  = "";
 
         for (int i = 1; i < args.length; i++) {
             if ("--whisper-port".equals(args[i]) && i + 1 < args.length) {
@@ -147,6 +181,14 @@ public class WhisperInteraction {
                 modelName = args[++i];
             } else if ("--status-port".equals(args[i]) && i + 1 < args.length) {
                 statusPort = Integer.parseInt(args[++i]);
+            } else if ("--no-memory".equals(args[i])) {
+                noMemoryFlag = true;
+            } else if ("--participant-id".equals(args[i]) && i + 1 < args.length) {
+                pidFlag = args[++i];
+            } else if ("--group".equals(args[i]) && i + 1 < args.length) {
+                groupFlag = args[++i].toUpperCase();
+            } else if ("--session".equals(args[i]) && i + 1 < args.length) {
+                sessionFlag = args[++i];
             }
         }
 
@@ -155,9 +197,23 @@ public class WhisperInteraction {
         System.out.println("  Ollama       : http://" + laptopIp + ":" + ollamaPort);
         System.out.println("  Model        : " + modelName);
         System.out.println("  Status       : http://0.0.0.0:" + statusPort + "/status");
+        if (noMemoryFlag) {
+            System.out.println("  Memory       : DISABLED (--no-memory)");
+        } else {
+            System.out.println("  Memory       : ENABLED");
+        }
+        if (!pidFlag.isEmpty()) {
+            System.out.println("  Participant  : " + pidFlag);
+            System.out.println("  Group        : " + groupFlag);
+            System.out.println("  Session      : " + sessionFlag);
+        }
         System.out.println();
 
         WhisperInteraction app = new WhisperInteraction();
+        app.noMemory = noMemoryFlag;
+        app.participantId = pidFlag;
+        app.groupId = groupFlag;
+        app.sessionNum = sessionFlag;
         app.initialize(laptopIp, whisperPort, ollamaPort, modelName, statusPort);
         app.run();
     }
@@ -253,9 +309,18 @@ public class WhisperInteraction {
         // 7. User memory
         userMemory = new UserMemory(DATA_DIR);
         log("UserMemory loaded: " + userMemory.getProfileCount() + " profiles");
+        statusServer.setUserMemory(userMemory);
+
+        // 8. DeepFace client (shares same server as Whisper)
+        deepFaceClient = new DeepFaceClient(laptopIp, whisperPort);
+        log("DeepFaceClient ready");
 
         // Update status
         statusServer.update("maxTurns", Integer.valueOf(MAX_CONVERSATION_TURNS));
+        statusServer.update("noMemory", Boolean.valueOf(noMemory));
+        statusServer.update("participantId", participantId);
+        statusServer.update("group", groupId);
+        statusServer.update("session", sessionNum);
 
         log("All subsystems initialized.");
         log("========================================================");
@@ -343,6 +408,7 @@ public class WhisperInteraction {
     private void handleRecognizing() {
         log("--- RECOGNIZING ---");
         gestureManager.setState(STATE_RECOGNIZING);
+        SoundEffects.play(SoundEffects.SFX_FACE_DETECTED);
 
         // Get face user from camera
         FaceDetectResult faceResult = camera.getDetectResult();
@@ -360,8 +426,8 @@ public class WhisperInteraction {
             detectedGender = (isMale != null && isMale.booleanValue()) ? "male" : "female";
         }
 
-        if (faceUser != null && !faceUser.isNewUser()) {
-            // Known user — load profile
+        if (!noMemory && faceUser != null && !faceUser.isNewUser()) {
+            // Known user — load profile (only when memory is enabled)
             String userName = faceUser.getName();
             log("Recognized known user: " + userName);
             currentUser = userMemory.getProfileByName(userName);
@@ -377,13 +443,29 @@ public class WhisperInteraction {
 
             isNewUser = false;
             updateUserStatus();
+        } else if (noMemory && faceUser != null && !faceUser.isNewUser()) {
+            // --no-memory: face is known but we pretend it's new
+            String userName = faceUser.getName();
+            log("Memory DISABLED: Ignoring known face '" + userName + "', treating as stranger");
+            currentUser = new UserMemory.UserProfile(userMemory.generateUserId(), "");
+            currentUser.estimatedAge = detectedAge;
+            currentUser.gender = detectedGender;
+            isNewUser = true;
+
+            // Still run DeepFace for ethnicity
+            analyzeEthnicity(faceResult);
+            updateUserStatus();
         } else {
-            // New face
+            // New face — run DeepFace ethnicity detection
             log("New face detected (age~" + detectedAge + ", " + detectedGender + ")");
             currentUser = new UserMemory.UserProfile(userMemory.generateUserId(), "");
             currentUser.estimatedAge = detectedAge;
             currentUser.gender = detectedGender;
             isNewUser = true;
+
+            // DeepFace ethnicity detection
+            analyzeEthnicity(faceResult);
+
             updateUserStatus();
         }
 
@@ -406,20 +488,41 @@ public class WhisperInteraction {
 
         String greeting;
         if (!isNewUser && currentUser != null && !currentUser.name.isEmpty()) {
-            // Personalized greeting for returning user
+            // REMEMBER condition: personalized greeting with explicit memory reference
             String socialLabel = currentUser.socialState;
-            if (UserMemory.SOCIAL_CLOSE.equals(socialLabel)) {
-                greeting = "Hey " + currentUser.name + "! Great to see you again! How's your day going?";
-            } else if (UserMemory.SOCIAL_FRIENDLY.equals(socialLabel)) {
-                greeting = "Hi " + currentUser.name + "! Nice to see you again! What's up?";
-            } else {
-                greeting = "Hello " + currentUser.name + "! Welcome back! How are you?";
+            String memoryRef = "";
+
+            // Reference past conversation if available
+            if (currentUser.shortMemorySummary != null && !currentUser.shortMemorySummary.isEmpty()) {
+                memoryRef = " Last time we talked about some interesting things!";
+            } else if (currentUser.interactionCount > 1) {
+                memoryRef = " We've met " + currentUser.interactionCount + " times now!";
             }
-            log("Returning user greeting: " + greeting);
+
+            if (UserMemory.SOCIAL_CLOSE.equals(socialLabel)) {
+                greeting = "Hey " + currentUser.name + "! Great to see you again!" + memoryRef
+                    + " How's your day going?";
+            } else if (UserMemory.SOCIAL_FRIENDLY.equals(socialLabel)) {
+                greeting = "Hi " + currentUser.name + "! Nice to see you again!" + memoryRef
+                    + " What's up?";
+            } else {
+                greeting = "Hello " + currentUser.name + "! I remember you! Welcome back!"
+                    + memoryRef + " How are you?";
+            }
+            log("REMEMBER greeting: " + greeting);
         } else {
-            // Generic greeting for new user
-            greeting = "Hello! I'm Sota, a friendly robot. Nice to meet you!";
-            log("New user greeting");
+            // New user or NO-REMEMBER: generic stranger greeting
+            if (currentUser != null && !currentUser.origin.isEmpty()) {
+                greeting = "Hello! I'm Sota, a friendly robot. Nice to meet you! "
+                    + "Are you from " + currentUser.origin + "?";
+                log("New user greeting with ethnicity guess: " + currentUser.origin);
+            } else {
+                greeting = "Hello! I'm Sota, a friendly robot. Nice to meet you!";
+                log("New user greeting (generic)");
+            }
+            if (noMemory) {
+                log("(--no-memory active: treating as stranger)");
+            }
         }
 
         statusServer.update("lastSotaText", greeting);
@@ -555,6 +658,7 @@ public class WhisperInteraction {
     private void handleListening() {
         log("--- LISTENING (turn " + (conversationTurn + 1) + "/" + MAX_CONVERSATION_TURNS + ") ---");
         gestureManager.setState(STATE_LISTENING);
+        SoundEffects.play(SoundEffects.SFX_LISTENING);
         statusServer.update("turn", Integer.valueOf(conversationTurn + 1));
 
         WhisperSTT.WhisperResult result = speechManager.listen(LISTEN_DURATION_MS);
@@ -624,6 +728,7 @@ public class WhisperInteraction {
     private void handleThinking() {
         log("--- THINKING ---");
         gestureManager.setState(STATE_THINKING);
+        SoundEffects.play(SoundEffects.SFX_THINKING);
 
         if (lastWhisperResult == null) {
             currentState = STATE_LISTENING;
@@ -697,6 +802,7 @@ public class WhisperInteraction {
     private void handleClosing() {
         log("--- CLOSING ---");
         gestureManager.setState(STATE_CLOSING);
+        SoundEffects.play(SoundEffects.SFX_CLOSING);
 
         // Generate memory summary if we had a conversation
         if (currentUser != null && conversationHistory.size() >= 2) {
@@ -793,7 +899,7 @@ public class WhisperInteraction {
         StringBuilder sb = new StringBuilder();
         sb.append("You are Sota, a friendly social robot. ");
 
-        // User context
+        // User context (only include memory when not in --no-memory mode)
         if (currentUser != null && !currentUser.name.isEmpty()) {
             sb.append("You are talking to ").append(currentUser.name).append(". ");
 
@@ -801,13 +907,18 @@ public class WhisperInteraction {
                 sb.append(currentUser.name).append(" is from ").append(currentUser.origin).append(". ");
             }
 
-            if (currentUser.interactionCount > 1) {
-                sb.append("You have met ").append(currentUser.interactionCount)
-                  .append(" times before. ");
-            }
-
-            if (!currentUser.shortMemorySummary.isEmpty()) {
-                sb.append("Previous conversations: ").append(currentUser.shortMemorySummary).append(" ");
+            if (!noMemory) {
+                // REMEMBER condition: include past interaction context
+                if (currentUser.interactionCount > 1) {
+                    sb.append("You have met ").append(currentUser.interactionCount)
+                      .append(" times before. ");
+                }
+                if (!currentUser.shortMemorySummary.isEmpty()) {
+                    sb.append("Previous conversations: ").append(currentUser.shortMemorySummary).append(" ");
+                }
+            } else {
+                // NO-REMEMBER: act as if first meeting
+                sb.append("This is your first time meeting this person. ");
             }
         }
 
@@ -928,6 +1039,138 @@ public class WhisperInteraction {
     // ----------------------------------------------------------------
     // Helpers
     // ----------------------------------------------------------------
+
+    // ----------------------------------------------------------------
+    // DeepFace ethnicity analysis
+    // ----------------------------------------------------------------
+
+    /** Run DeepFace on current camera frame to detect ethnicity. */
+    private void analyzeEthnicity(FaceDetectResult faceResult) {
+        try {
+            byte[] jpegBytes = toJpeg(faceResult);
+            if (jpegBytes == null || jpegBytes.length == 0) {
+                log("DeepFace: No image captured, skipping");
+                return;
+            }
+
+            log("DeepFace: Sending " + (jpegBytes.length / 1024) + " KB for analysis...");
+            DeepFaceClient.FaceAnalysisResult result = deepFaceClient.analyzeRace(jpegBytes);
+
+            if (result.ok && result.confidence >= 40) {
+                String guessedOrigin = raceToGuessedOrigin(result.dominantRace);
+                if (guessedOrigin != null) {
+                    currentUser.origin = guessedOrigin;
+                    currentUser.culturalContext = "DeepFace: " + result.dominantRace
+                        + " (" + result.confidence + "%)";
+                    log("DeepFace: Guessed origin = " + guessedOrigin
+                        + " (race=" + result.dominantRace + ", conf=" + result.confidence + "%)");
+                    statusServer.update("userOrigin", guessedOrigin);
+                } else {
+                    log("DeepFace: No origin mapping for race: " + result.dominantRace);
+                }
+            } else {
+                log("DeepFace: Low confidence or failed (ok=" + result.ok
+                    + ", conf=" + result.confidence + "%)");
+            }
+        } catch (Exception e) {
+            log("DeepFace: Error — " + e.getMessage());
+        }
+    }
+
+    /**
+     * Convert FaceDetectResult raw image to JPEG bytes.
+     * The camera returns raw BGR pixel data from OpenCV Mat.
+     * Uses OpenCV imencode for conversion, with ImageIO fallback.
+     */
+    private byte[] toJpeg(FaceDetectResult result) {
+        if (result == null) return null;
+
+        byte[] raw = null;
+        try {
+            raw = result.getRawImage();
+        } catch (Exception e) {
+            log("WARN: getRawImage() failed: " + e.getMessage());
+            return null;
+        }
+
+        if (raw == null || raw.length == 0) return null;
+
+        // Check if already JPEG (magic bytes: FF D8)
+        if (raw.length > 2
+                && (raw[0] & 0xFF) == 0xFF
+                && (raw[1] & 0xFF) == 0xD8) {
+            return raw;
+        }
+
+        // Try encoding raw BGR pixel data using OpenCV
+        try {
+            int[][] knownSizes = {
+                {640, 480}, {320, 240}, {1280, 720},
+                {1920, 1080}, {800, 600}, {1024, 768},
+            };
+
+            for (int s = 0; s < knownSizes.length; s++) {
+                int w = knownSizes[s][0], h = knownSizes[s][1];
+                if (raw.length == w * h * 3) {
+                    Mat mat = new Mat(h, w, CvType.CV_8UC3);
+                    mat.put(0, 0, raw);
+                    MatOfByte buf = new MatOfByte();
+                    Imgcodecs.imencode(".jpg", mat, buf);
+                    byte[] jpg = buf.toArray();
+                    mat.release();
+                    buf.release();
+                    return jpg;
+                }
+            }
+
+            // Try as grayscale
+            for (int s = 0; s < knownSizes.length; s++) {
+                int w = knownSizes[s][0], h = knownSizes[s][1];
+                if (raw.length == w * h) {
+                    Mat mat = new Mat(h, w, CvType.CV_8UC1);
+                    mat.put(0, 0, raw);
+                    MatOfByte buf = new MatOfByte();
+                    Imgcodecs.imencode(".jpg", mat, buf);
+                    byte[] jpg = buf.toArray();
+                    mat.release();
+                    buf.release();
+                    return jpg;
+                }
+            }
+
+            log("WARN: Raw image size " + raw.length + " doesn't match any known resolution");
+        } catch (Exception e) {
+            log("WARN: OpenCV encode failed: " + e.getMessage());
+        }
+
+        // Fallback: try ImageIO decode
+        try {
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(raw));
+            if (img != null) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ImageIO.write(img, "jpg", bos);
+                return bos.toByteArray();
+            }
+        } catch (Exception e) {
+            // Not a standard image format
+        }
+
+        log("WARN: Could not convert raw image (" + raw.length + " bytes) to JPEG");
+        return null;
+    }
+
+    /** Map DeepFace race label to a guessed origin for greeting. */
+    private String raceToGuessedOrigin(String race) {
+        if (race == null) return null;
+        String lower = race.toLowerCase().trim();
+        if ("asian".equals(lower))                       return "Asia";
+        if ("white".equals(lower))                       return "Europe or America";
+        if ("middle eastern".equals(lower))              return "the Middle East";
+        if ("indian".equals(lower))                      return "South Asia";
+        if ("latino hispanic".equals(lower))             return "Latin America";
+        if ("black".equals(lower))                       return "Africa or America";
+        return null;
+    }
 
     /** Extract origin from user response text (English translation). */
     private String extractOrigin(String textEn) {

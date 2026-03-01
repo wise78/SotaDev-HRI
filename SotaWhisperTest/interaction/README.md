@@ -31,7 +31,9 @@ ROBOT (Sota/Edison)                     LAPTOP (RTX 4070)
 
 ## Langkah 1 — Siapkan Laptop (SETIAP KALI mau pakai)
 
-Setiap kali mau menjalankan program ini, tiga hal berikut harus aktif di laptop **sebelum** menjalankan program di robot.
+Setiap kali mau menjalankan program ini, **dua server** berikut harus aktif di laptop **sebelum** menjalankan program di robot.
+
+> **Catatan v3**: DeepFace untuk deteksi etnisitas sudah terintegrasi di dalam `whisper_server.py` (endpoint `/analyze_face`). **Tidak perlu server tambahan** — cukup jalankan `whisper_server.py` seperti biasa, DeepFace otomatis aktif.
 
 ### 1a. Cari IP laptop dulu
 
@@ -48,30 +50,44 @@ Contoh: `192.168.11.32`
 
 ---
 
-### 1b. Jalankan Whisper Server
+### 1b. Jalankan Whisper Server (+ DeepFace)
+
+Server ini sekarang menangani **dua fungsi sekaligus**:
+- `/transcribe` — Speech-to-Text (Whisper)
+- `/analyze_face` — Deteksi etnisitas (DeepFace) ← **baru di v3**
 
 **Buka PowerShell BARU** (terminal 1):
 
 ```powershell
-cd C:\Users\interact-ai-001\eclipse-workspace\SotaSample\SotaWhisperTest
-.\start_server.bat
+cd C:\Users\interact-ai-001\eclipse-workspace\SotaSample\SotaWhisperTest\interaction
+python whisper_server.py
 ```
 
 **Output sukses:**
 ```
 Using device: cuda (NVIDIA GeForce RTX 4070 Laptop GPU)
 Loading Whisper model 'base' on cuda...
+DeepFace available: True
 Model ready. Starting Flask on port 5050
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:5050
 ```
+
+> **Pertama kali run?** DeepFace akan otomatis download model (~400MB ke `~/.deepface/`). Tunggu sampai selesai (~5 menit). Run berikutnya akan skip download.
 
 > **Terminal ini harus tetap terbuka.** Jangan ditutup selama program robot berjalan.
 
 Verifikasi server jalan (dari PowerShell lain):
 ```powershell
 curl.exe http://localhost:5050/health
-# Expected: {"device":"cuda","model":"base","status":"ok"}
+# Expected: {"deepface":true,"device":"cuda","model":"base","status":"ok"}
+```
+
+> Jika `"deepface":false` → DeepFace gagal load (biasanya karena dependencies belum install). Sistem tetap berjalan, hanya deteksi etnisitas yang dinonaktifkan.
+
+**Install dependencies jika belum** (sekali saja):
+```powershell
+pip install flask numpy openai-whisper pillow deepface
 ```
 
 ---

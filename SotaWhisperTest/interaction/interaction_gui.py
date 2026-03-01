@@ -1,31 +1,35 @@
 """
-interaction_gui.py -- Sota Interaction Monitor GUI
+interaction_gui.py -- Sota HRI Research Control GUI
 
-Real-time monitoring dashboard for WhisperInteraction running on Sota robot.
+Research operation dashboard for WhisperInteraction HRI experiment.
 Polls the embedded StatusServer (Java) on the robot via HTTP.
 
-Run from laptop:
+3 panels:
+  - Session Setup: participant ID, group, session, condition auto-calc, notes
+  - Live Monitor: robot state, VAD, recording, turn count, timer
+  - Conversation Log: scrollable, color-coded USER (blue) / ROBOT (green)
+
+Data logging:
+  - research_data/session_log.csv (master CSV, UTF-8 BOM)
+  - research_data/logs/P01_G1_S1_20260228_1430.txt (per-session detail)
+
+Run:
     python interaction_gui.py
     python interaction_gui.py --robot-ip 192.168.11.30
-
-Features:
-  - Prerequisites check (Whisper server, Ollama, Robot StatusServer)
-  - Robot FSM state display with color indicators
-  - VAD diagnostics (working/not working, audio level meter)
-  - Recording status with duration progress
-  - Conversation display (user text, English translation, Sota response)
-  - Live log panel
 """
 
 import os
 import sys
+import csv
 import json
 import time
+import datetime
 import threading
+import codecs
 
 try:
     import tkinter as tk
-    from tkinter import ttk, scrolledtext
+    from tkinter import ttk, scrolledtext, messagebox
 except ImportError:
     print("[ERROR] tkinter not available.")
     sys.exit(1)
@@ -37,230 +41,577 @@ except ImportError:
     from urllib2 import Request, urlopen, HTTPError, URLError
 
 
-# State color map
+# ================================================================
+# Constants
+# ================================================================
+
 STATE_COLORS = {
-    "init":        ("#607D8B", "white"),   # gray
-    "idle":        ("#ECEFF1", "black"),   # light gray
-    "recognizing": ("#FF8C00", "white"),   # orange
-    "greeting":    ("#66BB6A", "white"),   # green
-    "registering": ("#DAA520", "white"),   # gold
-    "listening":   ("#26C6DA", "white"),   # cyan
-    "thinking":    ("#FFCA28", "black"),   # yellow
-    "responding":  ("#43A047", "white"),   # dark green
-    "closing":     ("#90A4AE", "white"),   # gray
-    "shutdown":    ("#F44336", "white"),   # red
-    "error":       ("#D32F2F", "white"),   # dark red
+    "init":        ("#607D8B", "white"),
+    "idle":        ("#ECEFF1", "#263238"),
+    "recognizing": ("#FF8C00", "white"),
+    "greeting":    ("#66BB6A", "white"),
+    "registering": ("#DAA520", "white"),
+    "listening":   ("#26C6DA", "white"),
+    "thinking":    ("#FFCA28", "#263238"),
+    "responding":  ("#43A047", "white"),
+    "closing":     ("#90A4AE", "white"),
+    "shutdown":    ("#F44336", "white"),
+    "error":       ("#D32F2F", "white"),
 }
 
 STATE_LABELS = {
     "init":        "INITIALIZING",
-    "idle":        "IDLE -- Waiting for face",
-    "recognizing": "RECOGNIZING -- Identifying face...",
+    "idle":        "IDLE",
+    "recognizing": "RECOGNIZING",
     "greeting":    "GREETING",
-    "registering": "REGISTERING -- New user setup...",
-    "listening":   "LISTENING -- Recording...",
-    "thinking":    "THINKING -- LLM processing...",
-    "responding":  "RESPONDING -- Speaking...",
-    "closing":     "CLOSING -- Goodbye",
+    "registering": "REGISTERING",
+    "listening":   "LISTENING",
+    "thinking":    "THINKING",
+    "responding":  "RESPONDING",
+    "closing":     "CLOSING",
     "shutdown":    "SHUTDOWN",
     "error":       "ERROR",
 }
 
-# Social state colors for User Profile panel
-SOCIAL_COLORS = {
-    "stranger":     "#9E9E9E",
-    "acquaintance": "#42A5F5",
-    "friendly":     "#66BB6A",
-    "close":        "#AB47BC",
+# Experiment condition mapping
+# G1 (Remember): S1=NOVICE+WOR, S2=REMEMBER+WR
+# G2 (Control):  S1=NOVICE+WOR, S2=NO-REMEMBER+WOR
+CONDITION_MAP = {
+    ("G1", "1"): ("NOVICE",      "WOR", "First meeting, no memory, no reciprocity"),
+    ("G1", "2"): ("REMEMBER",    "WR",  "Memory active, with reciprocity"),
+    ("G2", "1"): ("NOVICE",      "WOR", "First meeting, no memory, no reciprocity"),
+    ("G2", "2"): ("NO-REMEMBER", "WOR", "No memory, no reciprocity (control)"),
 }
 
+RESEARCH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "research_data")
+LOGS_DIR = os.path.join(RESEARCH_DIR, "logs")
+CSV_FILE = os.path.join(RESEARCH_DIR, "session_log.csv")
 
-class InteractionGUI:
-    def __init__(self, root, robot_ip="192.168.11.30", status_port=5051,
-                 whisper_port=5050, ollama_port=11434):
+CSV_COLUMNS = [
+    "participant_id", "group", "session_num", "condition_code", "condition_label",
+    "with_reciprocity", "start_time", "end_time", "duration_sec", "total_turns",
+    "user_turns", "robot_turns", "user_initiated_goodbye", "peak_vad_level",
+    "conversation_file", "researcher_notes",
+]
+
+
+# ================================================================
+# Data Logger
+# ================================================================
+
+class DataLogger:
+    """Handles CSV master log and per-session TXT conversation logs."""
+
+    def __init__(self):
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        self._ensure_csv()
+        self.txt_path = None
+        self.txt_file = None
+        self.turn_count = 0
+        self.user_turns = 0
+        self.robot_turns = 0
+        self.peak_vad = 0
+        self.user_goodbye = False
+
+    def _ensure_csv(self):
+        """Create CSV with UTF-8 BOM header if it doesn't exist."""
+        if os.path.exists(CSV_FILE):
+            return
+        with open(CSV_FILE, "wb") as f:
+            f.write(codecs.BOM_UTF8)
+        with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(CSV_COLUMNS)
+
+    def start_session(self, pid, group, session_num, condition_code, condition_label,
+                      with_reciprocity):
+        """Open a new TXT log file for this session."""
+        now = datetime.datetime.now()
+        ts_str = now.strftime("%Y%m%d_%H%M")
+        filename = "{}_{}_{}_{}_{}.txt".format(
+            pid, group, "S" + str(session_num), condition_code, ts_str)
+        self.txt_path = os.path.join(LOGS_DIR, filename)
+
+        self.txt_file = open(self.txt_path, "w", encoding="utf-8")
+        self.txt_file.write("=" * 60 + "\n")
+        self.txt_file.write("HRI Experiment Session Log\n")
+        self.txt_file.write("=" * 60 + "\n")
+        self.txt_file.write("Participant : {}\n".format(pid))
+        self.txt_file.write("Group       : {}\n".format(group))
+        self.txt_file.write("Session     : {}\n".format(session_num))
+        self.txt_file.write("Condition   : {} ({})\n".format(condition_code, condition_label))
+        self.txt_file.write("Reciprocity : {}\n".format(with_reciprocity))
+        self.txt_file.write("Start Time  : {}\n".format(now.strftime("%Y-%m-%d %H:%M:%S")))
+        self.txt_file.write("=" * 60 + "\n\n")
+        self.txt_file.flush()
+
+        self.turn_count = 0
+        self.user_turns = 0
+        self.robot_turns = 0
+        self.peak_vad = 0
+        self.user_goodbye = False
+
+    def log_turn(self, role, text, lang="", text_en=""):
+        """Log a conversation turn."""
+        if self.txt_file is None:
+            return
+        self.turn_count += 1
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
+
+        if role == "USER":
+            self.user_turns += 1
+            self.txt_file.write("[{}] Turn {} - USER".format(ts, self.turn_count))
+            if lang:
+                self.txt_file.write(" (lang={})".format(lang))
+            self.txt_file.write("\n")
+            self.txt_file.write("  Original : {}\n".format(text))
+            if text_en and text_en != text:
+                self.txt_file.write("  English  : {}\n".format(text_en))
+        elif role == "ROBOT":
+            self.robot_turns += 1
+            self.txt_file.write("[{}] Turn {} - ROBOT\n".format(ts, self.turn_count))
+            self.txt_file.write("  Response : {}\n".format(text))
+
+        self.txt_file.write("\n")
+        self.txt_file.flush()
+
+    def update_vad(self, level):
+        if level > self.peak_vad:
+            self.peak_vad = level
+
+    def mark_goodbye(self, user_initiated):
+        self.user_goodbye = user_initiated
+
+    def end_session(self, pid, group, session_num, condition_code, condition_label,
+                    with_reciprocity, start_time, notes=""):
+        """Close TXT log and append row to master CSV."""
+        now = datetime.datetime.now()
+        duration = (now - start_time).total_seconds()
+
+        # Close TXT
+        if self.txt_file is not None:
+            self.txt_file.write("\n" + "=" * 60 + "\n")
+            self.txt_file.write("End Time    : {}\n".format(now.strftime("%Y-%m-%d %H:%M:%S")))
+            self.txt_file.write("Duration    : {:.0f}s\n".format(duration))
+            self.txt_file.write("Total Turns : {}\n".format(self.turn_count))
+            self.txt_file.write("User Turns  : {}\n".format(self.user_turns))
+            self.txt_file.write("Robot Turns : {}\n".format(self.robot_turns))
+            self.txt_file.write("Peak VAD    : {}\n".format(self.peak_vad))
+            self.txt_file.write("Goodbye     : {}\n".format(
+                "User initiated" if self.user_goodbye else "Robot/timeout"))
+            if notes:
+                self.txt_file.write("Notes       : {}\n".format(notes))
+            self.txt_file.write("=" * 60 + "\n")
+            self.txt_file.close()
+            self.txt_file = None
+
+        # Append CSV
+        conv_file = os.path.basename(self.txt_path) if self.txt_path else ""
+        row = [
+            pid,
+            group,
+            session_num,
+            condition_code,
+            condition_label,
+            with_reciprocity,
+            start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            now.strftime("%Y-%m-%d %H:%M:%S"),
+            "{:.0f}".format(duration),
+            self.turn_count,
+            self.user_turns,
+            self.robot_turns,
+            "yes" if self.user_goodbye else "no",
+            self.peak_vad,
+            conv_file,
+            notes.replace("\n", " "),
+        ]
+
+        with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(row)
+
+        return conv_file
+
+
+# ================================================================
+# Main GUI
+# ================================================================
+
+class ResearchGUI:
+    def __init__(self, root, robot_ip="192.168.11.30", status_port=5051):
         self.root = root
-        self.root.title("Sota Interaction Monitor")
-        self.root.geometry("780x920")
-        self.root.minsize(700, 800)
+        self.root.title("Sota HRI Research Control")
+        self.root.geometry("900x850")
+        self.root.minsize(800, 750)
 
         self.robot_ip = robot_ip
         self.status_port = status_port
-        self.whisper_port = whisper_port
-        self.ollama_port = ollama_port
 
         self.polling = False
-        self.poll_interval = 500  # ms
-        self.prev_state = ""
+        self.poll_interval = 500
         self.connected = False
+        self.prev_state = ""
+
+        # Session state
+        self.session_active = False
+        self.session_start_time = None
+        self.logger = DataLogger()
+
+        # Track last seen conversation to detect new turns
+        self._last_user_text = ""
+        self._last_sota_text = ""
 
         self._build_ui()
-        self._log("Interaction Monitor started.")
-        self._log("Configure Robot IP and click Connect.")
+        self._log("Research Control GUI started.")
+        self._log("1) Connect to robot  2) Set session params  3) Click START")
 
     # ================================================================
-    # UI Construction
+    # UI
     # ================================================================
 
     def _build_ui(self):
-        # --- Connection frame ---
-        conn_frame = ttk.LabelFrame(self.root, text="Connection", padding=6)
+        # Top bar: connection
+        conn_frame = ttk.LabelFrame(self.root, text="Robot Connection", padding=6)
         conn_frame.pack(fill="x", padx=8, pady=(8, 4))
 
         ttk.Label(conn_frame, text="Robot IP:").grid(row=0, column=0, sticky="w")
         self.robot_ip_var = tk.StringVar(value=self.robot_ip)
-        ttk.Entry(conn_frame, textvariable=self.robot_ip_var, width=16).grid(row=0, column=1, padx=4)
+        ttk.Entry(conn_frame, textvariable=self.robot_ip_var, width=16).grid(
+            row=0, column=1, padx=4)
 
-        ttk.Label(conn_frame, text="Status Port:").grid(row=0, column=2, padx=(8, 0))
+        ttk.Label(conn_frame, text="Port:").grid(row=0, column=2, padx=(8, 0))
         self.status_port_var = tk.StringVar(value=str(self.status_port))
-        ttk.Entry(conn_frame, textvariable=self.status_port_var, width=6).grid(row=0, column=3, padx=4)
+        ttk.Entry(conn_frame, textvariable=self.status_port_var, width=6).grid(
+            row=0, column=3, padx=4)
 
-        ttk.Label(conn_frame, text="Whisper Port:").grid(row=0, column=4, padx=(8, 0))
-        self.whisper_port_var = tk.StringVar(value=str(self.whisper_port))
-        ttk.Entry(conn_frame, textvariable=self.whisper_port_var, width=6).grid(row=0, column=5, padx=4)
+        self.connect_btn = ttk.Button(conn_frame, text="Connect",
+                                       command=self._toggle_connect)
+        self.connect_btn.grid(row=0, column=4, padx=(12, 4))
 
-        self.connect_btn = ttk.Button(conn_frame, text="Connect", command=self._toggle_connect)
-        self.connect_btn.grid(row=0, column=6, padx=(12, 4))
-
-        self.conn_indicator = tk.Label(conn_frame, text=" DISCONNECTED ", bg="#c62828", fg="white",
+        self.conn_indicator = tk.Label(conn_frame, text=" DISCONNECTED ",
+                                        bg="#c62828", fg="white",
                                         font=("Consolas", 9, "bold"), relief="sunken")
-        self.conn_indicator.grid(row=0, column=7, padx=4)
+        self.conn_indicator.grid(row=0, column=5, padx=4)
 
-        # --- Prerequisites frame ---
-        prereq_frame = ttk.LabelFrame(self.root, text="Prerequisites", padding=6)
-        prereq_frame.pack(fill="x", padx=8, pady=4)
+        # --- Main content: 3 panels ---
+        main_pw = ttk.PanedWindow(self.root, orient="vertical")
+        main_pw.pack(fill="both", expand=True, padx=8, pady=4)
 
-        self.prereq_indicators = {}
-        prereq_items = [
-            ("whisper", "Whisper Server (laptop)"),
-            ("ollama", "Ollama LLM (laptop)"),
-            ("robot", "Robot StatusServer"),
-        ]
-        for i, (key, label) in enumerate(prereq_items):
-            ttk.Label(prereq_frame, text=label).grid(row=0, column=i*2, sticky="w", padx=(0 if i==0 else 12, 4))
-            ind = tk.Label(prereq_frame, text="  ?  ", bg="gray", fg="white",
-                           font=("Consolas", 9, "bold"), relief="sunken", width=6)
-            ind.grid(row=0, column=i*2+1, padx=2)
-            self.prereq_indicators[key] = ind
+        # Panel 1: Session Setup
+        self._build_session_panel(main_pw)
 
-        ttk.Button(prereq_frame, text="Recheck", command=self._check_prerequisites).grid(
-            row=0, column=6, padx=(12, 0))
+        # Panel 2: Live Monitor
+        self._build_monitor_panel(main_pw)
 
-        # --- State frame ---
-        state_frame = ttk.LabelFrame(self.root, text="Robot State", padding=8)
-        state_frame.pack(fill="x", padx=8, pady=4)
+        # Panel 3: Conversation Log
+        self._build_conversation_panel(main_pw)
 
-        self.state_label = tk.Label(state_frame, text="  DISCONNECTED  ",
-                                     font=("Consolas", 16, "bold"),
-                                     bg="#607D8B", fg="white", padx=16, pady=8, relief="raised")
-        self.state_label.pack(fill="x")
+    # ---- Panel 1: Session Setup ----
+    def _build_session_panel(self, parent):
+        frame = ttk.LabelFrame(parent, text="Session Setup", padding=8)
+        parent.add(frame, weight=0)
 
-        state_info = ttk.Frame(state_frame)
-        state_info.pack(fill="x", pady=(6, 0))
+        # Row 0: Participant ID + Group + Session
+        r0 = ttk.Frame(frame)
+        r0.pack(fill="x", pady=(0, 4))
 
-        ttk.Label(state_info, text="Turn:", font=("Consolas", 10)).pack(side="left")
-        self.turn_var = tk.StringVar(value="- / -")
-        ttk.Label(state_info, textvariable=self.turn_var, font=("Consolas", 10, "bold")).pack(side="left", padx=(4, 16))
+        ttk.Label(r0, text="Participant ID:", font=("Consolas", 10)).pack(side="left")
+        self.pid_var = tk.StringVar(value="P01")
+        ttk.Entry(r0, textvariable=self.pid_var, width=8,
+                  font=("Consolas", 10)).pack(side="left", padx=(4, 16))
 
-        ttk.Label(state_info, text="Uptime:", font=("Consolas", 10)).pack(side="left")
-        self.uptime_var = tk.StringVar(value="-")
-        ttk.Label(state_info, textvariable=self.uptime_var, font=("Consolas", 10, "bold")).pack(side="left", padx=(4, 16))
+        ttk.Label(r0, text="Group:", font=("Consolas", 10)).pack(side="left")
+        self.group_var = tk.StringVar(value="G1")
+        group_cb = ttk.Combobox(r0, textvariable=self.group_var, values=["G1", "G2"],
+                                 width=4, state="readonly", font=("Consolas", 10))
+        group_cb.pack(side="left", padx=(4, 16))
+        group_cb.bind("<<ComboboxSelected>>", lambda e: self._update_condition())
 
-        ttk.Label(state_info, text="Silence retries:", font=("Consolas", 10)).pack(side="left")
+        ttk.Label(r0, text="Session:", font=("Consolas", 10)).pack(side="left")
+        self.session_var = tk.StringVar(value="1")
+        session_cb = ttk.Combobox(r0, textvariable=self.session_var, values=["1", "2"],
+                                   width=4, state="readonly", font=("Consolas", 10))
+        session_cb.pack(side="left", padx=(4, 16))
+        session_cb.bind("<<ComboboxSelected>>", lambda e: self._update_condition())
+
+        # Row 1: Auto-calculated condition display
+        r1 = ttk.Frame(frame)
+        r1.pack(fill="x", pady=4)
+
+        ttk.Label(r1, text="Condition:", font=("Consolas", 10)).pack(side="left")
+        self.condition_var = tk.StringVar(value="")
+        self.condition_label = tk.Label(r1, textvariable=self.condition_var,
+                                         font=("Consolas", 11, "bold"), fg="#1565C0")
+        self.condition_label.pack(side="left", padx=(4, 16))
+
+        ttk.Label(r1, text="Reciprocity:", font=("Consolas", 10)).pack(side="left")
+        self.reciprocity_var = tk.StringVar(value="")
+        self.reciprocity_label = tk.Label(r1, textvariable=self.reciprocity_var,
+                                           font=("Consolas", 11, "bold"), fg="#2E7D32")
+        self.reciprocity_label.pack(side="left", padx=4)
+
+        # Row 2: Description
+        r2 = ttk.Frame(frame)
+        r2.pack(fill="x", pady=(0, 4))
+        self.desc_var = tk.StringVar(value="")
+        ttk.Label(r2, textvariable=self.desc_var, font=("Consolas", 9),
+                  foreground="#616161").pack(side="left")
+
+        # Row 3: Start/End buttons + timer + notes
+        r3 = ttk.Frame(frame)
+        r3.pack(fill="x", pady=4)
+
+        self.start_btn = ttk.Button(r3, text="START SESSION",
+                                     command=self._start_session)
+        self.start_btn.pack(side="left", padx=(0, 8))
+
+        self.end_btn = ttk.Button(r3, text="END SESSION",
+                                   command=self._end_session, state="disabled")
+        self.end_btn.pack(side="left", padx=(0, 16))
+
+        self.timer_var = tk.StringVar(value="00:00")
+        self.timer_label = tk.Label(r3, textvariable=self.timer_var,
+                                     font=("Consolas", 16, "bold"), fg="#37474F")
+        self.timer_label.pack(side="left", padx=8)
+
+        self.session_status_var = tk.StringVar(value="No active session")
+        tk.Label(r3, textvariable=self.session_status_var,
+                 font=("Consolas", 10, "bold"), fg="#9E9E9E").pack(side="right")
+
+        # Row 4: Notes
+        r4 = ttk.Frame(frame)
+        r4.pack(fill="x", pady=(4, 0))
+        ttk.Label(r4, text="Notes:", font=("Consolas", 10)).pack(side="left")
+        self.notes_var = tk.StringVar(value="")
+        ttk.Entry(r4, textvariable=self.notes_var, font=("Consolas", 10)).pack(
+            side="left", fill="x", expand=True, padx=4)
+
+        self._update_condition()
+
+    # ---- Panel 2: Live Monitor ----
+    def _build_monitor_panel(self, parent):
+        frame = ttk.LabelFrame(parent, text="Live Monitor", padding=8)
+        parent.add(frame, weight=1)
+
+        # State display
+        self.state_label = tk.Label(frame, text="  DISCONNECTED  ",
+                                     font=("Consolas", 14, "bold"),
+                                     bg="#607D8B", fg="white", padx=12, pady=6,
+                                     relief="raised")
+        self.state_label.pack(fill="x", pady=(0, 6))
+
+        # Info row: turn, silence retries, VAD, recording
+        info = ttk.Frame(frame)
+        info.pack(fill="x", pady=2)
+
+        ttk.Label(info, text="Turn:", font=("Consolas", 10)).pack(side="left")
+        self.turn_var = tk.StringVar(value="-/-")
+        ttk.Label(info, textvariable=self.turn_var,
+                  font=("Consolas", 10, "bold")).pack(side="left", padx=(2, 12))
+
+        ttk.Label(info, text="Silence:", font=("Consolas", 10)).pack(side="left")
         self.silence_var = tk.StringVar(value="-")
-        ttk.Label(state_info, textvariable=self.silence_var, font=("Consolas", 10, "bold")).pack(side="left", padx=4)
+        ttk.Label(info, textvariable=self.silence_var,
+                  font=("Consolas", 10, "bold")).pack(side="left", padx=(2, 12))
 
-        # --- VAD frame ---
-        vad_frame = ttk.LabelFrame(self.root, text="Voice Activity Detection (VAD)", padding=8)
-        vad_frame.pack(fill="x", padx=8, pady=4)
+        ttk.Label(info, text="VAD:", font=("Consolas", 10)).pack(side="left")
+        self.vad_var = tk.StringVar(value="-")
+        self.vad_label = tk.Label(info, textvariable=self.vad_var,
+                                   font=("Consolas", 10, "bold"), fg="#607D8B")
+        self.vad_label.pack(side="left", padx=(2, 12))
 
-        vad_row1 = ttk.Frame(vad_frame)
-        vad_row1.pack(fill="x")
-
-        ttk.Label(vad_row1, text="VAD Status:", font=("Consolas", 10)).pack(side="left")
-        self.vad_status_var = tk.StringVar(value="Unknown")
-        self.vad_status_label = tk.Label(vad_row1, textvariable=self.vad_status_var,
-                                          font=("Consolas", 10, "bold"), fg="#607D8B")
-        self.vad_status_label.pack(side="left", padx=8)
-
-        ttk.Label(vad_row1, text="Recording:", font=("Consolas", 10)).pack(side="left", padx=(16, 0))
-        self.rec_status_var = tk.StringVar(value="--")
-        self.rec_status_label = tk.Label(vad_row1, textvariable=self.rec_status_var,
-                                          font=("Consolas", 10, "bold"))
-        self.rec_status_label.pack(side="left", padx=8)
+        ttk.Label(info, text="Rec:", font=("Consolas", 10)).pack(side="left")
+        self.rec_var = tk.StringVar(value="--")
+        self.rec_label = tk.Label(info, textvariable=self.rec_var,
+                                   font=("Consolas", 10, "bold"), fg="#607D8B")
+        self.rec_label.pack(side="left", padx=2)
 
         # Audio level bar
-        vad_row2 = ttk.Frame(vad_frame)
-        vad_row2.pack(fill="x", pady=(6, 0))
+        level_row = ttk.Frame(frame)
+        level_row.pack(fill="x", pady=(4, 2))
 
-        ttk.Label(vad_row2, text="Audio Level:", font=("Consolas", 10)).pack(side="left")
+        ttk.Label(level_row, text="Audio:", font=("Consolas", 9)).pack(side="left")
+        self.level_canvas = tk.Canvas(level_row, height=16, bg="#263238",
+                                       relief="sunken", bd=1)
+        self.level_canvas.pack(side="left", fill="x", expand=True, padx=4)
+        self.level_text_var = tk.StringVar(value="--")
+        ttk.Label(level_row, textvariable=self.level_text_var,
+                  font=("Consolas", 9)).pack(side="left")
 
-        self.level_canvas = tk.Canvas(vad_row2, height=22, bg="#263238", relief="sunken", bd=1)
-        self.level_canvas.pack(side="left", fill="x", expand=True, padx=8)
-
-        self.level_text_var = tk.StringVar(value="-- / thr:300")
-        ttk.Label(vad_row2, textvariable=self.level_text_var, font=("Consolas", 9)).pack(side="left")
-
-        # --- Conversation frame ---
-        conv_frame = ttk.LabelFrame(self.root, text="Conversation", padding=8)
-        conv_frame.pack(fill="x", padx=8, pady=4)
-
-        conv_grid = ttk.Frame(conv_frame)
-        conv_grid.pack(fill="x")
+        # Current conversation snapshot
+        conv = ttk.Frame(frame)
+        conv.pack(fill="x", pady=(6, 0))
 
         self.conv_vars = {}
-        conv_labels = [
-            ("lang", "Language:"),
-            ("user_text", "User said:"),
-            ("user_en", "English:"),
-            ("sota_text", "Sota says:"),
-        ]
-        for i, (key, label) in enumerate(conv_labels):
-            ttk.Label(conv_grid, text=label, font=("Consolas", 10)).grid(row=i, column=0, sticky="nw", padx=(0, 8), pady=1)
+        for key, label in [("user", "User:"), ("english", "Eng:"), ("robot", "Sota:")]:
+            row = ttk.Frame(conv)
+            row.pack(fill="x", pady=1)
+            ttk.Label(row, text=label, font=("Consolas", 9), width=6,
+                      anchor="e").pack(side="left")
             var = tk.StringVar(value="-")
-            lbl = ttk.Label(conv_grid, textvariable=var, font=("Consolas", 10, "bold"),
-                            wraplength=580, justify="left")
-            lbl.grid(row=i, column=1, sticky="w", pady=1)
+            lbl = ttk.Label(row, textvariable=var, font=("Consolas", 9, "bold"),
+                            wraplength=700, justify="left")
+            lbl.pack(side="left", padx=4)
             self.conv_vars[key] = var
 
-        conv_grid.columnconfigure(1, weight=1)
+        # User profile
+        profile_row = ttk.Frame(frame)
+        profile_row.pack(fill="x", pady=(4, 0))
+        ttk.Label(profile_row, text="Profile:", font=("Consolas", 9)).pack(side="left")
+        self.profile_var = tk.StringVar(value="-")
+        ttk.Label(profile_row, textvariable=self.profile_var,
+                  font=("Consolas", 9, "bold")).pack(side="left", padx=4)
 
-        # --- User Profile frame ---
-        profile_frame = ttk.LabelFrame(self.root, text="User Profile", padding=8)
-        profile_frame.pack(fill="x", padx=8, pady=4)
+    # ---- Panel 3: Conversation Log ----
+    def _build_conversation_panel(self, parent):
+        frame = ttk.LabelFrame(parent, text="Conversation Log", padding=4)
+        parent.add(frame, weight=2)
 
-        profile_grid = ttk.Frame(profile_frame)
-        profile_grid.pack(fill="x")
+        self.conv_log = scrolledtext.ScrolledText(frame, height=12,
+                                                    font=("Consolas", 10),
+                                                    state="disabled", wrap="word")
+        self.conv_log.pack(fill="both", expand=True)
 
-        self.profile_vars = {}
-        profile_labels = [
-            ("name", "Name:"),
-            ("origin", "Origin:"),
-            ("interactions", "Interactions:"),
-            ("social_level", "Relationship:"),
-            ("language", "Language:"),
-        ]
-        for i, (key, label) in enumerate(profile_labels):
-            ttk.Label(profile_grid, text=label, font=("Consolas", 10)).grid(
-                row=0 if i < 3 else 1, column=(i % 3) * 2, sticky="w", padx=(0 if i % 3 == 0 else 12, 4), pady=2)
-            var = tk.StringVar(value="-")
-            lbl = tk.Label(profile_grid, textvariable=var, font=("Consolas", 10, "bold"),
-                           fg="#37474F")
-            lbl.grid(row=0 if i < 3 else 1, column=(i % 3) * 2 + 1, sticky="w", pady=2)
-            self.profile_vars[key] = (var, lbl)
+        # Color tags
+        self.conv_log.tag_configure("user", foreground="#1565C0",
+                                     font=("Consolas", 10, "bold"))
+        self.conv_log.tag_configure("robot", foreground="#2E7D32",
+                                     font=("Consolas", 10, "bold"))
+        self.conv_log.tag_configure("system", foreground="#9E9E9E",
+                                     font=("Consolas", 9, "italic"))
+        self.conv_log.tag_configure("timestamp", foreground="#78909C",
+                                     font=("Consolas", 9))
 
-        profile_grid.columnconfigure(1, weight=1)
-        profile_grid.columnconfigure(3, weight=1)
-        profile_grid.columnconfigure(5, weight=1)
+        # Bottom bar: clear + export info
+        bar = ttk.Frame(frame)
+        bar.pack(fill="x", pady=(4, 0))
+        ttk.Button(bar, text="Clear", command=self._clear_conv_log).pack(side="left")
+        self.log_info_var = tk.StringVar(value="")
+        ttk.Label(bar, textvariable=self.log_info_var,
+                  font=("Consolas", 9), foreground="#9E9E9E").pack(side="right")
 
-        # --- Log frame ---
-        log_frame = ttk.LabelFrame(self.root, text="Log", padding=4)
-        log_frame.pack(fill="both", expand=True, padx=8, pady=(4, 8))
+    # ================================================================
+    # Condition Auto-calculation
+    # ================================================================
 
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=10,
-                                                    font=("Consolas", 9), state="disabled")
-        self.log_text.pack(fill="both", expand=True)
+    def _update_condition(self):
+        group = self.group_var.get()
+        session = self.session_var.get()
+        key = (group, session)
+        if key in CONDITION_MAP:
+            code, recip, desc = CONDITION_MAP[key]
+            self.condition_var.set(code)
+            self.reciprocity_var.set(recip)
+            self.desc_var.set(desc)
 
-        ttk.Button(log_frame, text="Clear Log", command=self._clear_log).pack(anchor="e", pady=(4, 0))
+            if code == "REMEMBER":
+                self.condition_label.config(fg="#2E7D32")
+            elif code == "NO-REMEMBER":
+                self.condition_label.config(fg="#C62828")
+            else:
+                self.condition_label.config(fg="#1565C0")
+
+            if recip == "WR":
+                self.reciprocity_label.config(fg="#2E7D32")
+            else:
+                self.reciprocity_label.config(fg="#9E9E9E")
+        else:
+            self.condition_var.set("?")
+            self.reciprocity_var.set("?")
+            self.desc_var.set("")
+
+    # ================================================================
+    # Session Control
+    # ================================================================
+
+    def _start_session(self):
+        if not self.connected:
+            messagebox.showwarning("Not Connected",
+                                    "Connect to robot first before starting a session.")
+            return
+
+        pid = self.pid_var.get().strip()
+        if not pid:
+            messagebox.showwarning("Missing ID", "Enter a Participant ID (e.g., P01).")
+            return
+
+        group = self.group_var.get()
+        session = self.session_var.get()
+        key = (group, session)
+        if key not in CONDITION_MAP:
+            messagebox.showerror("Invalid", "Unknown group/session combination.")
+            return
+
+        code, recip, desc = CONDITION_MAP[key]
+
+        # Confirm
+        msg = ("Start session?\n\n"
+               "Participant: {}\n"
+               "Group: {} | Session: {}\n"
+               "Condition: {} ({})\n"
+               "Reciprocity: {}").format(pid, group, session, code, desc, recip)
+        if not messagebox.askyesno("Confirm Start", msg):
+            return
+
+        self.session_active = True
+        self.session_start_time = datetime.datetime.now()
+
+        # Lock inputs
+        self.start_btn.config(state="disabled")
+        self.end_btn.config(state="normal")
+        self.session_status_var.set("SESSION ACTIVE")
+
+        # Start logger
+        self.logger.start_session(pid, group, session, code,
+                                   "{} ({})".format(code, desc), recip)
+
+        self._append_conv_log("system",
+                               "--- Session started: {} {} S{} {} ---".format(
+                                   pid, group, session, code))
+
+        self._log("SESSION STARTED: {} {} S{} {}".format(pid, group, session, code))
+        if self.logger.txt_path:
+            self.log_info_var.set("Log: " + os.path.basename(self.logger.txt_path))
+
+        # Start timer
+        self._update_timer()
+
+    def _end_session(self):
+        if not self.session_active:
+            return
+
+        if not messagebox.askyesno("Confirm End", "End this session?"):
+            return
+
+        pid = self.pid_var.get().strip()
+        group = self.group_var.get()
+        session = self.session_var.get()
+        code, recip, desc = CONDITION_MAP.get((group, session), ("?", "?", "?"))
+        notes = self.notes_var.get().strip()
+
+        conv_file = self.logger.end_session(
+            pid, group, session, code,
+            "{} ({})".format(code, desc), recip,
+            self.session_start_time, notes)
+
+        self._append_conv_log("system", "--- Session ended ---")
+        self._log("SESSION ENDED: {} (saved to {})".format(pid, conv_file))
+
+        self.session_active = False
+        self.session_start_time = None
+        self.start_btn.config(state="normal")
+        self.end_btn.config(state="disabled")
+        self.session_status_var.set("Session complete")
+        self.timer_var.set("00:00")
+
+    def _update_timer(self):
+        if not self.session_active or self.session_start_time is None:
+            return
+        elapsed = (datetime.datetime.now() - self.session_start_time).total_seconds()
+        mins = int(elapsed) // 60
+        secs = int(elapsed) % 60
+        self.timer_var.set("{:02d}:{:02d}".format(mins, secs))
+        self.root.after(1000, self._update_timer)
 
     # ================================================================
     # Connection
@@ -275,16 +626,14 @@ class InteractionGUI:
     def _connect(self):
         self.robot_ip = self.robot_ip_var.get().strip()
         self.status_port = int(self.status_port_var.get().strip())
-        self.whisper_port = int(self.whisper_port_var.get().strip())
-
-        self._log("Connecting to robot at {}:{}...".format(self.robot_ip, self.status_port))
+        self._log("Connecting to {}:{}...".format(self.robot_ip, self.status_port))
         self.connect_btn.config(text="Connecting...", state="disabled")
 
         def try_connect():
             url = "http://{}:{}/health".format(self.robot_ip, self.status_port)
             try:
                 resp = urlopen(url, timeout=3)
-                body = resp.read().decode("utf-8")
+                resp.read()
                 self.root.after(0, lambda: self._on_connected(True))
             except Exception as e:
                 self.root.after(0, lambda: self._on_connected(False, str(e)))
@@ -298,16 +647,13 @@ class InteractionGUI:
             self.polling = True
             self.connect_btn.config(text="Disconnect")
             self.conn_indicator.config(text=" CONNECTED ", bg="#2e7d32")
-            self._log("Connected to robot StatusServer!")
-            self._check_prerequisites()
-            self._start_prereq_timer()
+            self._log("Connected to robot!")
             self._poll()
         else:
             self.connected = False
             self.conn_indicator.config(text=" FAILED ", bg="#c62828")
             self.connect_btn.config(text="Connect")
             self._log("Connection failed: {}".format(err))
-            self._log("Make sure WhisperInteraction is running on the robot.")
 
     def _disconnect(self):
         self.polling = False
@@ -316,57 +662,6 @@ class InteractionGUI:
         self.conn_indicator.config(text=" DISCONNECTED ", bg="#c62828")
         self.state_label.config(text="  DISCONNECTED  ", bg="#607D8B", fg="white")
         self._log("Disconnected.")
-
-    # ================================================================
-    # Prerequisites Check
-    # ================================================================
-
-    def _check_prerequisites(self):
-        self._log("Checking prerequisites...")
-
-        def check_service(name, url):
-            try:
-                resp = urlopen(url, timeout=3)
-                resp.read()
-                return True
-            except Exception:
-                return False
-
-        def do_checks():
-            robot_ip = self.robot_ip_var.get().strip()
-            whisper_port = self.whisper_port_var.get().strip()
-
-            results = {}
-            results["whisper"] = check_service("Whisper",
-                "http://localhost:{}/health".format(whisper_port))
-            results["ollama"] = check_service("Ollama",
-                "http://localhost:11434/api/tags")
-            results["robot"] = check_service("Robot",
-                "http://{}:{}/health".format(robot_ip, self.status_port_var.get().strip()))
-
-            self.root.after(0, lambda: self._update_prerequisites(results))
-
-        threading.Thread(target=do_checks, daemon=True).start()
-
-    def _update_prerequisites(self, results):
-        for key, ok in results.items():
-            ind = self.prereq_indicators[key]
-            if ok:
-                ind.config(text="  OK  ", bg="#2e7d32", fg="white")
-            else:
-                ind.config(text=" FAIL ", bg="#c62828", fg="white")
-
-        msgs = []
-        for key, ok in results.items():
-            msgs.append("{}: {}".format(key, "OK" if ok else "FAIL"))
-        self._log("Prerequisites: {}".format(", ".join(msgs)))
-
-    def _start_prereq_timer(self):
-        """Recheck prerequisites every 15 seconds while connected."""
-        if not self.polling:
-            return
-        self._check_prerequisites()
-        self.root.after(15000, self._start_prereq_timer)
 
     # ================================================================
     # Polling
@@ -391,117 +686,109 @@ class InteractionGUI:
     def _on_poll_error(self, err):
         if self.polling:
             self.conn_indicator.config(text=" LOST ", bg="#FF9800")
-            # Schedule next poll (slower on error)
             self.root.after(2000, self._poll)
 
     def _update_ui(self, data):
         if not self.polling:
             return
 
-        # Restore connection indicator
         self.conn_indicator.config(text=" CONNECTED ", bg="#2e7d32")
 
-        # --- State ---
+        # State
         state = data.get("state", "?")
         colors = STATE_COLORS.get(state, ("#607D8B", "white"))
         label = STATE_LABELS.get(state, state.upper())
         self.state_label.config(text="  " + label + "  ", bg=colors[0], fg=colors[1])
 
-        # Log state transitions
         if state != self.prev_state and self.prev_state:
             self._log("State: {} -> {}".format(self.prev_state.upper(), state.upper()))
+            if self.session_active:
+                self._append_conv_log("system", "[State: {}]".format(label))
         self.prev_state = state
 
-        # --- Turn / Uptime / Silence ---
+        # Turn / Silence
         turn = data.get("turn", 0)
         max_turns = data.get("maxTurns", 8)
-        self.turn_var.set("{} / {}".format(turn, max_turns))
+        self.turn_var.set("{}/{}".format(turn, max_turns))
+        self.silence_var.set(str(data.get("silenceRetries", 0)))
 
-        uptime_ms = data.get("uptime", 0)
-        uptime_s = int(uptime_ms / 1000)
-        if uptime_s >= 3600:
-            self.uptime_var.set("{}h {}m {}s".format(uptime_s // 3600, (uptime_s % 3600) // 60, uptime_s % 60))
-        elif uptime_s >= 60:
-            self.uptime_var.set("{}m {}s".format(uptime_s // 60, uptime_s % 60))
-        else:
-            self.uptime_var.set("{}s".format(uptime_s))
-
-        silence = data.get("silenceRetries", 0)
-        self.silence_var.set(str(silence))
-
-        # --- VAD ---
+        # VAD
         vad_working = data.get("vadWorking", False)
         vad_level = data.get("vadLevel", -1)
         is_recording = data.get("isRecording", False)
         is_speech = data.get("isSpeech", False)
-        rec_duration = data.get("recordingDurationMs", 0)
+        rec_dur = data.get("recordingDurationMs", 0)
 
         if vad_working:
-            self.vad_status_var.set("WORKING (DirectVAD, RMS-based, early-stop enabled)")
-            self.vad_status_label.config(fg="#2e7d32")
-        elif is_recording:
-            self.vad_status_var.set("RECORDING (waiting for VAD data...)")
-            self.vad_status_label.config(fg="#FF9800")
-        elif not is_recording and state == "idle":
-            self.vad_status_var.set("Standby")
-            self.vad_status_label.config(fg="#607D8B")
+            self.vad_var.set("OK")
+            self.vad_label.config(fg="#2e7d32")
         else:
-            self.vad_status_var.set("Ready")
-            self.vad_status_label.config(fg="#607D8B")
+            self.vad_var.set("N/A")
+            self.vad_label.config(fg="#9E9E9E")
 
         if is_recording:
-            dur_s = rec_duration / 1000.0
-            self.rec_status_var.set("RECORDING ({:.1f}s / 15.0s)".format(dur_s))
-            self.rec_status_label.config(fg="#c62828")
+            self.rec_var.set("{:.1f}s".format(rec_dur / 1000.0))
+            self.rec_label.config(fg="#c62828")
         else:
-            self.rec_status_var.set("--")
-            self.rec_status_label.config(fg="#607D8B")
+            self.rec_var.set("--")
+            self.rec_label.config(fg="#607D8B")
 
-        # Audio level bar
+        # Level bar
         self._draw_level_bar(vad_level, is_speech, vad_working)
-        if vad_level >= 0:
-            self.level_text_var.set("{} / thr:300".format(vad_level))
+        self.level_text_var.set(str(vad_level) if vad_level >= 0 else "--")
+
+        if vad_level > 0 and self.session_active:
+            self.logger.update_vad(vad_level)
+
+        # Conversation snapshot
+        user_text = data.get("lastUserText", "") or ""
+        user_en = data.get("lastUserTextEn", "") or ""
+        sota_text = data.get("lastSotaText", "") or ""
+        lang = data.get("lastDetectedLang", "") or ""
+
+        self.conv_vars["user"].set(user_text if user_text else "-")
+        self.conv_vars["english"].set(user_en if user_en else "-")
+        self.conv_vars["robot"].set(sota_text if sota_text else "-")
+
+        # Detect new conversation turns for logging
+        if self.session_active:
+            if user_text and user_text != self._last_user_text:
+                self._last_user_text = user_text
+                self._append_conv_log("user", user_text)
+                if user_en and user_en != user_text:
+                    self._append_conv_log("system", "  (EN: {})".format(user_en))
+                self.logger.log_turn("USER", user_text, lang, user_en)
+
+            if sota_text and sota_text != self._last_sota_text:
+                self._last_sota_text = sota_text
+                self._append_conv_log("robot", sota_text)
+                self.logger.log_turn("ROBOT", sota_text)
+
+            # Detect goodbye
+            if state == "closing":
+                lower = user_text.lower() if user_text else ""
+                user_bye = any(w in lower for w in
+                               ["bye", "goodbye", "see you", "sayonara",
+                                "mata ne", "sampai jumpa"])
+                self.logger.mark_goodbye(user_bye)
+
+        # User profile
+        name = data.get("userName", "") or ""
+        origin = data.get("userOrigin", "") or ""
+        social = data.get("userSocialLevel", "") or ""
+        interactions = data.get("userInteractions", 0)
+        if name:
+            self.profile_var.set("{} | {} | {} | {} interactions".format(
+                name, origin if origin else "?", social.upper() if social else "?",
+                interactions))
         else:
-            self.level_text_var.set("-- / thr:300")
+            self.profile_var.set("-")
 
-        # --- Conversation ---
-        lang = data.get("lastDetectedLang", "-")
-        self.conv_vars["lang"].set(lang)
-        self.conv_vars["user_text"].set(data.get("lastUserText", "-") or "-")
-        self.conv_vars["user_en"].set(data.get("lastUserTextEn", "-") or "-")
-        self.conv_vars["sota_text"].set(data.get("lastSotaText", "-") or "-")
-
-        # --- User Profile ---
-        user_name = data.get("userName", "") or ""
-        user_origin = data.get("userOrigin", "") or ""
-        user_interactions = data.get("userInteractions", 0)
-        user_social = data.get("userSocialLevel", "") or ""
-        user_lang = data.get("detectedLanguage", "") or ""
-
-        self.profile_vars["name"][0].set(user_name if user_name else "-")
-        self.profile_vars["origin"][0].set(user_origin if user_origin else "-")
-        self.profile_vars["interactions"][0].set(str(user_interactions) if user_interactions else "-")
-
-        if user_social:
-            self.profile_vars["social_level"][0].set(user_social.upper())
-            social_color = SOCIAL_COLORS.get(user_social, "#37474F")
-            self.profile_vars["social_level"][1].config(fg=social_color)
-        else:
-            self.profile_vars["social_level"][0].set("-")
-            self.profile_vars["social_level"][1].config(fg="#37474F")
-
-        self.profile_vars["language"][0].set(user_lang if user_lang else "-")
-
-        # Robot is alive (we just got a response)
-        self.prereq_indicators["robot"].config(text="  OK  ", bg="#2e7d32")
-        # Note: Whisper & Ollama indicators are only updated by _check_prerequisites()
-        # (laptop-side direct check), NOT from robot data which is only checked once at startup.
-
-        # Schedule next poll
+        # Next poll
         self.root.after(self.poll_interval, self._poll)
 
     # ================================================================
-    # Level bar drawing
+    # Level bar
     # ================================================================
 
     def _draw_level_bar(self, level, is_speech, vad_working):
@@ -510,48 +797,68 @@ class InteractionGUI:
         w = c.winfo_width()
         h = c.winfo_height()
         if w <= 1:
-            w = 400  # initial size before layout
+            w = 400
         if h <= 1:
-            h = 22
+            h = 16
 
         if level < 0:
-            # No data — gray bar with standby message
-            c.create_text(w // 2, h // 2, text="Standby — waiting for recording",
-                          fill="#78909C", font=("Consolas", 9))
+            c.create_text(w // 2, h // 2, text="--", fill="#546E7A",
+                          font=("Consolas", 8))
             return
 
-        # Draw threshold line
-        max_level = 2000  # reasonable max for display
+        max_level = 2000
         thr_x = int(300.0 / max_level * w)
-        c.create_line(thr_x, 0, thr_x, h, fill="#FF9800", width=2)
+        c.create_line(thr_x, 0, thr_x, h, fill="#FF9800", width=1)
 
-        # Draw level bar
         bar_x = min(int(float(level) / max_level * w), w)
-        color = "#43A047" if is_speech else "#546E7A"
-        if is_speech:
-            color = "#43A047"  # green — speech
-        elif level > 300:
-            color = "#FDD835"  # yellow — some activity
-        else:
-            color = "#546E7A"  # gray — quiet
-
-        c.create_rectangle(0, 2, bar_x, h - 2, fill=color, outline="")
+        color = "#43A047" if is_speech else ("#FDD835" if level > 300 else "#546E7A")
+        c.create_rectangle(0, 1, bar_x, h - 1, fill=color, outline="")
 
     # ================================================================
-    # Logging
+    # Conversation Log
+    # ================================================================
+
+    def _append_conv_log(self, role, text):
+        """Append a line to the conversation log with color coding."""
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
+        self.conv_log.config(state="normal")
+
+        if role == "user":
+            self.conv_log.insert("end", "[{}] ".format(ts), "timestamp")
+            self.conv_log.insert("end", "USER: {}\n".format(text), "user")
+        elif role == "robot":
+            self.conv_log.insert("end", "[{}] ".format(ts), "timestamp")
+            self.conv_log.insert("end", "SOTA: {}\n".format(text), "robot")
+        elif role == "system":
+            self.conv_log.insert("end", "[{}] {}\n".format(ts, text), "system")
+
+        self.conv_log.see("end")
+        self.conv_log.config(state="disabled")
+
+    def _clear_conv_log(self):
+        self.conv_log.config(state="normal")
+        self.conv_log.delete("1.0", "end")
+        self.conv_log.config(state="disabled")
+
+    # ================================================================
+    # Log (status bar style)
     # ================================================================
 
     def _log(self, msg):
-        ts = time.strftime("%H:%M:%S")
-        self.log_text.config(state="normal")
-        self.log_text.insert("end", "[{}] {}\n".format(ts, msg))
-        self.log_text.see("end")
-        self.log_text.config(state="disabled")
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
+        print("[{}] {}".format(ts, msg))
 
-    def _clear_log(self):
-        self.log_text.config(state="normal")
-        self.log_text.delete("1.0", "end")
-        self.log_text.config(state="disabled")
+    # ================================================================
+    # Cleanup
+    # ================================================================
+
+    def on_closing(self):
+        if self.session_active:
+            if messagebox.askyesno("Session Active",
+                                    "A session is still active. End it before closing?"):
+                self._end_session()
+        self.polling = False
+        self.root.destroy()
 
 
 # ================================================================
@@ -561,9 +868,7 @@ class InteractionGUI:
 def main():
     robot_ip = "192.168.11.30"
     status_port = 5051
-    whisper_port = 5050
 
-    # Parse simple args
     args = sys.argv[1:]
     i = 0
     while i < len(args):
@@ -573,17 +878,13 @@ def main():
         elif args[i] == "--status-port" and i + 1 < len(args):
             status_port = int(args[i + 1])
             i += 2
-        elif args[i] == "--whisper-port" and i + 1 < len(args):
-            whisper_port = int(args[i + 1])
-            i += 2
         else:
-            # Treat bare arg as robot IP
             robot_ip = args[i]
             i += 1
 
     root = tk.Tk()
-    InteractionGUI(root, robot_ip=robot_ip, status_port=status_port,
-                    whisper_port=whisper_port)
+    gui = ResearchGUI(root, robot_ip=robot_ip, status_port=status_port)
+    root.protocol("WM_DELETE_CLOSE", gui.on_closing)
     root.mainloop()
 
 

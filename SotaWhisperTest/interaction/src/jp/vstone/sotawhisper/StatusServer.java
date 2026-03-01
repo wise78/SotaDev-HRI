@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,6 +17,7 @@ import java.util.Map;
  * Endpoints:
  *   GET /status  -> full JSON status
  *   GET /health  -> {"ok":true}
+ *   GET /memory  -> JSON array of all stored user profiles
  *
  * Thread-safe: update() can be called from any thread.
  * Java 1.8, no lambda.
@@ -30,6 +32,7 @@ public class StatusServer {
     private Thread serverThread;
     private volatile boolean running = false;
     private final long startTime;
+    private volatile UserMemory userMemory;  // optional, set after init
 
     public StatusServer(int port) {
         this.port = port;
@@ -51,6 +54,11 @@ public class StatusServer {
         update("lastSotaText", "");
         update("whisperAlive", Boolean.FALSE);
         update("ollamaAlive", Boolean.FALSE);
+    }
+
+    /** Set user memory reference for /memory endpoint. */
+    public void setUserMemory(UserMemory memory) {
+        this.userMemory = memory;
     }
 
     /** Update a status field. Thread-safe. */
@@ -173,8 +181,10 @@ public class StatusServer {
                 responseJson = buildStatusJson();
             } else if ("/health".equals(path)) {
                 responseJson = "{\"ok\":true}";
+            } else if ("/memory".equals(path)) {
+                responseJson = buildMemoryJson();
             } else {
-                responseJson = "{\"error\":\"Not found. Use /status or /health\"}";
+                responseJson = "{\"error\":\"Not found. Use /status, /health, or /memory\"}";
             }
 
             // CORS headers for browser access
@@ -235,6 +245,22 @@ public class StatusServer {
         }
 
         sb.append("}");
+        return sb.toString();
+    }
+
+    private String buildMemoryJson() {
+        if (userMemory == null) {
+            return "{\"ok\":false,\"error\":\"Memory not initialized\",\"profiles\":[]}";
+        }
+        List allProfiles = userMemory.getAllProfiles();
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"ok\":true,\"count\":").append(allProfiles.size());
+        sb.append(",\"profiles\":[");
+        for (int i = 0; i < allProfiles.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(((UserMemory.UserProfile) allProfiles.get(i)).toJson());
+        }
+        sb.append("]}");
         return sb.toString();
     }
 

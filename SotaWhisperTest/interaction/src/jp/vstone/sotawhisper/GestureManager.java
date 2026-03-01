@@ -8,13 +8,17 @@ import jp.vstone.RobotLib.CSotaMotion;
 
 /**
  * Manages dynamic gestures, LED colors, and motion based on interaction state.
- * Runs gesture + LED loops in background threads.
+ * Runs gesture + LED loops in background daemon threads.
  *
  * Servo IDs (Sota):
  *   1=HEAD_Y, 2=HEAD_P, 3=HEAD_R, 4=BODY_Y,
  *   5=L_SHOULDER_P, 6=R_SHOULDER_P, 7=L_ELBOW_P, 8=R_ELBOW_P
  *
- * Patterns adapted from DynamicVulnerabilityStudy.java.
+ * Safe servo ranges:
+ *   HEAD_Y: -700..700, HEAD_P: -700..300, HEAD_R: -150..150
+ *   BODY_Y: -500..900
+ *   L/R_SHOULDER: -900..100, L/R_ELBOW: -900..70
+ *
  * Java 1.8, no lambda.
  */
 public class GestureManager {
@@ -31,10 +35,12 @@ public class GestureManager {
     private static final byte SV_L_ELBOW_P    = 7;
     private static final byte SV_R_ELBOW_P    = 8;
 
+    private static final int SPEAKING_PATTERN_COUNT = 5;
+
     private final CSotaMotion motion;
     private final Random random = new Random();
 
-    private volatile String currentState = "idle";  // idle, greeting, listening, thinking, responding, closing
+    private volatile String currentState = "idle";
     private volatile boolean running = false;
 
     private Thread gestureThread;
@@ -94,6 +100,10 @@ public class GestureManager {
 
                 if ("greeting".equals(state) || "responding".equals(state)) {
                     gestureSpeaking();
+                } else if ("recognizing".equals(state)) {
+                    gestureRecognizing();
+                } else if ("registering".equals(state)) {
+                    gestureRegistering();
                 } else if ("listening".equals(state)) {
                     gestureListening();
                 } else if ("thinking".equals(state)) {
@@ -102,7 +112,6 @@ public class GestureManager {
                     gestureWaveGoodbye();
                     CRobotUtil.wait(2000);
                 } else {
-                    // idle
                     gestureIdle();
                 }
             } catch (Exception e) {
@@ -112,32 +121,154 @@ public class GestureManager {
         }
     }
 
-    // --- Speaking gestures: random nods + arm movement ---
+    // ----------------------------------------------------------------
+    // Speaking — 5 dynamic patterns with both hands
+    // ----------------------------------------------------------------
+
     private void gestureSpeaking() {
-        short nod   = (short) randomRange(-100, 100);
-        short armL  = (short) randomRange(-200, 200);
-        short armR  = (short) randomRange(-200, 200);
+        int pattern = random.nextInt(SPEAKING_PATTERN_COUNT);
+        switch (pattern) {
+            case 0:  gestureSpeakNodAndArms();     break;
+            case 1:  gestureSpeakBothHandsOpen();  break;
+            case 2:  gestureSpeakLeftEmphasis();    break;
+            case 3:  gestureSpeakRightEmphasis();   break;
+            case 4:  gestureSpeakBodySway();        break;
+            default: gestureSpeakNodAndArms();      break;
+        }
+    }
+
+    /** Pattern 0: Nod with both arms moving randomly. */
+    private void gestureSpeakNodAndArms() {
         safePlayPose(
-            new Byte[]  { SV_HEAD_P, SV_HEAD_Y, SV_L_SHOULDER_P, SV_R_SHOULDER_P },
-            new Short[] { nod, (short) randomRange(-150, 150), armL, armR },
+            new Byte[]  { SV_HEAD_P, SV_HEAD_Y,
+                          SV_L_SHOULDER_P, SV_R_SHOULDER_P,
+                          SV_L_ELBOW_P, SV_R_ELBOW_P },
+            new Short[] { (short) randomRange(-150, 150),
+                          (short) randomRange(-200, 200),
+                          (short) randomRange(-400, 50),
+                          (short) randomRange(-400, 50),
+                          (short) randomRange(-300, 50),
+                          (short) randomRange(-300, 50) },
+            500 + random.nextInt(500));
+    }
+
+    /** Pattern 1: Both arms open outward — "explaining" gesture. */
+    private void gestureSpeakBothHandsOpen() {
+        short shoulderVal = (short) randomRange(-600, -300);
+        short elbowVal    = (short) randomRange(-400, -100);
+        safePlayPose(
+            new Byte[]  { SV_HEAD_P, SV_HEAD_Y,
+                          SV_L_SHOULDER_P, SV_R_SHOULDER_P,
+                          SV_L_ELBOW_P, SV_R_ELBOW_P },
+            new Short[] { (short) randomRange(-50, 80),
+                          (short) randomRange(-100, 100),
+                          shoulderVal, shoulderVal,
+                          elbowVal, elbowVal },
+            700 + random.nextInt(300));
+        CRobotUtil.wait(200);
+        safePlayPose(
+            new Byte[]  { SV_L_SHOULDER_P, SV_R_SHOULDER_P,
+                          SV_L_ELBOW_P, SV_R_ELBOW_P },
+            new Short[] { (short) randomRange(-200, 0),
+                          (short) randomRange(-200, 0),
+                          (short) randomRange(-100, 0),
+                          (short) randomRange(-100, 0) },
+            500);
+    }
+
+    /** Pattern 2: Left arm emphasis — body turns left. */
+    private void gestureSpeakLeftEmphasis() {
+        safePlayPose(
+            new Byte[]  { SV_HEAD_Y, SV_HEAD_P, SV_BODY_Y,
+                          SV_L_SHOULDER_P, SV_L_ELBOW_P,
+                          SV_R_SHOULDER_P },
+            new Short[] { (short) randomRange(-200, -50),
+                          (short) randomRange(-50, 100),
+                          (short) randomRange(-200, -50),
+                          (short) randomRange(-700, -400),
+                          (short) randomRange(-500, -200),
+                          (short) randomRange(-100, 50) },
             600 + random.nextInt(400));
     }
 
-    // --- Listening: lean forward, slight nod ---
+    /** Pattern 3: Right arm emphasis — body turns right. */
+    private void gestureSpeakRightEmphasis() {
+        safePlayPose(
+            new Byte[]  { SV_HEAD_Y, SV_HEAD_P, SV_BODY_Y,
+                          SV_R_SHOULDER_P, SV_R_ELBOW_P,
+                          SV_L_SHOULDER_P },
+            new Short[] { (short) randomRange(50, 200),
+                          (short) randomRange(-50, 100),
+                          (short) randomRange(50, 200),
+                          (short) randomRange(-700, -400),
+                          (short) randomRange(-500, -200),
+                          (short) randomRange(-100, 50) },
+            600 + random.nextInt(400));
+    }
+
+    /** Pattern 4: Body sway — torso rotation with synchronized arms. */
+    private void gestureSpeakBodySway() {
+        short bodyDir = (short) (random.nextBoolean()
+            ? randomRange(200, 450) : randomRange(-450, -200));
+        safePlayPose(
+            new Byte[]  { SV_BODY_Y, SV_HEAD_Y,
+                          SV_L_SHOULDER_P, SV_R_SHOULDER_P,
+                          SV_L_ELBOW_P, SV_R_ELBOW_P },
+            new Short[] { bodyDir,
+                          (short) (-bodyDir / 3),
+                          (short) randomRange(-400, -100),
+                          (short) randomRange(-400, -100),
+                          (short) randomRange(-300, -50),
+                          (short) randomRange(-300, -50) },
+            700 + random.nextInt(400));
+    }
+
+    // ----------------------------------------------------------------
+    // Recognizing: alert posture
+    // ----------------------------------------------------------------
+
+    private void gestureRecognizing() {
+        safePlayPose(
+            new Byte[]  { SV_HEAD_P, SV_HEAD_R, SV_BODY_Y },
+            new Short[] { (short) randomRange(30, 80), (short) 0, (short) 0 },
+            500);
+        CRobotUtil.wait(800);
+    }
+
+    // ----------------------------------------------------------------
+    // Registering: curious tilt
+    // ----------------------------------------------------------------
+
+    private void gestureRegistering() {
+        short roll = (short) (random.nextBoolean() ? 120 : -120);
+        safePlayPose(
+            new Byte[]  { SV_HEAD_R, SV_HEAD_P, SV_HEAD_Y },
+            new Short[] { roll, (short) 50, (short) randomRange(-80, 80) },
+            700);
+        CRobotUtil.wait(1200);
+    }
+
+    // ----------------------------------------------------------------
+    // Listening: lean forward, attentive nod
+    // ----------------------------------------------------------------
+
     private void gestureListening() {
         safePlayPose(
             new Byte[]  { SV_HEAD_Y, SV_HEAD_P, SV_BODY_Y },
-            new Short[] { (short) randomRange(-50, 50), (short) 40, (short) randomRange(-30, 30) },
+            new Short[] { (short) randomRange(-50, 50), (short) 40,
+                          (short) randomRange(-30, 30) },
             800);
         CRobotUtil.wait(1500 + random.nextInt(1000));
-        // Small nod
         safePlayPose(
             new Byte[]  { SV_HEAD_P },
             new Short[] { (short) randomRange(20, 80) },
             400);
     }
 
-    // --- Thinking: head tilt ---
+    // ----------------------------------------------------------------
+    // Thinking: head tilt
+    // ----------------------------------------------------------------
+
     private void gestureThinking() {
         short roll = (short) (random.nextBoolean() ? 200 : -200);
         safePlayPose(
@@ -147,24 +278,29 @@ public class GestureManager {
         CRobotUtil.wait(500);
     }
 
-    // --- Idle: subtle breathing movement ---
+    // ----------------------------------------------------------------
+    // Idle: subtle breathing
+    // ----------------------------------------------------------------
+
     private void gestureIdle() {
         safePlayPose(
             new Byte[]  { SV_HEAD_Y, SV_HEAD_P, SV_HEAD_R },
-            new Short[] { (short) randomRange(-80, 80), (short) randomRange(-30, 60), (short) 0 },
+            new Short[] { (short) randomRange(-80, 80),
+                          (short) randomRange(-30, 60), (short) 0 },
             1200);
         CRobotUtil.wait(2000 + random.nextInt(2000));
     }
 
-    // --- Wave goodbye ---
+    // ----------------------------------------------------------------
+    // Wave goodbye
+    // ----------------------------------------------------------------
+
     private void gestureWaveGoodbye() {
-        // Raise right arm
         safePlayPose(
             new Byte[]  { SV_HEAD_P, SV_R_SHOULDER_P, SV_R_ELBOW_P },
             new Short[] { 50, (short) -900, (short) -400 },
             600);
         CRobotUtil.wait(300);
-        // Wave back and forth
         for (int i = 0; i < 3; i++) {
             safePlayPose(
                 new Byte[]  { SV_R_ELBOW_P },
@@ -195,7 +331,6 @@ public class GestureManager {
                 CRobotPose ledPose = new CRobotPose();
 
                 if ("idle".equals(state)) {
-                    // Soft white breathing
                     breath += delta;
                     if (breath >= 220) { breath = 220; delta = -Math.abs(delta); }
                     else if (breath <= 100) { breath = 100; delta = Math.abs(delta); }
@@ -203,14 +338,23 @@ public class GestureManager {
                     motion.play(ledPose, 100);
                     CRobotUtil.wait(120);
 
+                } else if ("recognizing".equals(state)) {
+                    ledPose.setLED_Sota(Color.ORANGE, Color.ORANGE, 220, Color.ORANGE);
+                    motion.play(ledPose, 100);
+                    CRobotUtil.wait(150);
+
+                } else if ("registering".equals(state)) {
+                    ledPose.setLED_Sota(new Color(218, 165, 32), new Color(218, 165, 32),
+                                        200, new Color(218, 165, 32));
+                    motion.play(ledPose, 100);
+                    CRobotUtil.wait(150);
+
                 } else if ("greeting".equals(state) || "responding".equals(state)) {
-                    // Green pulse
                     ledPose.setLED_Sota(Color.GREEN, Color.GREEN, 255, Color.GREEN);
                     motion.play(ledPose, 120);
                     CRobotUtil.wait(120);
 
                 } else if ("listening".equals(state)) {
-                    // Cyan breathing (alternating)
                     if ((pulse++ % 2) == 0) {
                         ledPose.setLED_Sota(Color.CYAN, Color.CYAN, 220, Color.CYAN);
                     } else {
@@ -221,13 +365,11 @@ public class GestureManager {
                     CRobotUtil.wait(300);
 
                 } else if ("thinking".equals(state)) {
-                    // Yellow pulse
                     ledPose.setLED_Sota(Color.YELLOW, Color.YELLOW, 200, Color.ORANGE);
                     motion.play(ledPose, 120);
                     CRobotUtil.wait(200);
 
                 } else if ("closing".equals(state)) {
-                    // Fade to white
                     ledPose.setLED_Sota(Color.WHITE, Color.WHITE, 150, Color.WHITE);
                     motion.play(ledPose, 200);
                     CRobotUtil.wait(200);
