@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 /**
  * HTTP client for DeepFace race/ethnicity detection.
@@ -98,10 +99,10 @@ public class DeepFaceClient {
             conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(READ_TIMEOUT_MS);
 
-            OutputStream os = conn.getOutputStream();
-            os.write(body);
-            os.flush();
-            os.close();
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+                os.flush();
+            }
 
             int httpCode = conn.getResponseCode();
             if (httpCode != 200) {
@@ -154,11 +155,11 @@ public class DeepFaceClient {
             + "Content-Disposition: form-data; name=\"image\"; filename=\""
             + filename + "\"\r\n"
             + "Content-Type: image/jpeg\r\n\r\n";
-        out.write(header.getBytes("UTF-8"));
+        out.write(header.getBytes(StandardCharsets.UTF_8));
         out.write(imageBytes);
 
         String footer = "\r\n--" + boundary + "--\r\n";
-        out.write(footer.getBytes("UTF-8"));
+        out.write(footer.getBytes(StandardCharsets.UTF_8));
 
         return out.toByteArray();
     }
@@ -169,19 +170,14 @@ public class DeepFaceClient {
 
     private String readResponseBody(InputStream is) throws IOException {
         if (is == null) return "";
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 sb.append(line);
             }
             return sb.toString();
-        } finally {
-            if (reader != null) {
-                try { reader.close(); } catch (IOException ignored) {}
-            }
         }
     }
 

@@ -1,16 +1,14 @@
 package jp.vstone.sotawhisper;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * User memory system for WhisperInteraction.
@@ -25,7 +23,7 @@ public class UserMemory {
     private static final String TAG = "UserMemory";
 
     private final String filePath;
-    private final Map profiles;  // String userId -> UserProfile
+    private final Map<String, UserProfile> profiles;
 
     // ================================================================
     // Inner enum: SocialState
@@ -152,7 +150,7 @@ public class UserMemory {
             dir.mkdirs();
         }
         this.filePath = dataDir + File.separator + "user_profiles.json";
-        this.profiles = new HashMap();
+        this.profiles = new HashMap<String, UserProfile>();
         loadProfiles();
     }
 
@@ -162,15 +160,13 @@ public class UserMemory {
 
     /** Get profile by userId. Returns null if not found. */
     public UserProfile getProfileByUserId(String userId) {
-        return (UserProfile) profiles.get(userId);
+        return profiles.get(userId);
     }
 
     /** Get profile by name (case-insensitive). Returns null if not found. */
     public UserProfile getProfileByName(String name) {
         if (name == null) return null;
-        Object[] values = profiles.values().toArray();
-        for (int i = 0; i < values.length; i++) {
-            UserProfile p = (UserProfile) values[i];
+        for (UserProfile p : profiles.values()) {
             if (name.equalsIgnoreCase(p.name)) {
                 return p;
             }
@@ -192,13 +188,13 @@ public class UserMemory {
     }
 
     /** Get all profiles. */
-    public List getAllProfiles() {
-        return new ArrayList(profiles.values());
+    public List<UserProfile> getAllProfiles() {
+        return new ArrayList<UserProfile>(profiles.values());
     }
 
-    /** Generate a unique userId. */
+    /** Generate a unique userId using UUID. */
     public String generateUserId() {
-        return "user_" + System.currentTimeMillis() + "_" + profiles.size();
+        return "user_" + UUID.randomUUID().toString().replace("-", "");
     }
 
     /** Get profile count. */
@@ -219,25 +215,18 @@ public class UserMemory {
         }
 
         try {
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            reader.close();
+            String content = new String(
+                Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8).trim();
 
-            String content = sb.toString().trim();
             if (content.isEmpty() || !content.startsWith("[")) {
                 log("Profile file empty or malformed. Starting fresh.");
                 return;
             }
 
-            List objects = splitJsonArray(content);
-            for (int i = 0; i < objects.size(); i++) {
+            List<String> objects = splitJsonArray(content);
+            for (String objJson : objects) {
                 try {
-                    UserProfile p = UserProfile.fromJson((String) objects.get(i));
+                    UserProfile p = UserProfile.fromJson(objJson);
                     if (p.userId != null && !p.userId.isEmpty()) {
                         profiles.put(p.userId, p);
                     }
@@ -254,17 +243,16 @@ public class UserMemory {
 
     public void saveProfiles() {
         try {
-            PrintWriter pw = new PrintWriter(
-                new OutputStreamWriter(new FileOutputStream(filePath), "UTF-8"));
-            pw.println("[");
-            Object[] values = profiles.values().toArray();
-            for (int i = 0; i < values.length; i++) {
-                if (i > 0) pw.println(",");
-                pw.print("  " + ((UserProfile) values[i]).toJson());
+            StringBuilder sb = new StringBuilder();
+            sb.append("[\n");
+            boolean first = true;
+            for (UserProfile p : profiles.values()) {
+                if (!first) sb.append(",\n");
+                sb.append("  ").append(p.toJson());
+                first = false;
             }
-            pw.println();
-            pw.println("]");
-            pw.close();
+            sb.append("\n]\n");
+            Files.write(Paths.get(filePath), sb.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log("ERROR saving profiles: " + e.getMessage());
         }
@@ -274,8 +262,8 @@ public class UserMemory {
     // JSON array splitter — extract top-level {...} from [...]
     // ================================================================
 
-    private List splitJsonArray(String arrayJson) {
-        List objects = new ArrayList();
+    private List<String> splitJsonArray(String arrayJson) {
+        List<String> objects = new ArrayList<String>();
         int depth = 0;
         int objStart = -1;
 

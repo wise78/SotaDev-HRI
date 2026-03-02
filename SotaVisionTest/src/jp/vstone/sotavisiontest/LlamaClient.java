@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -137,10 +138,10 @@ public class LlamaClient {
                 + "\"stream\":true,"
                 + "\"options\":{\"num_predict\":" + maxPredict + "}}";
 
-            OutputStream os = conn.getOutputStream();
-            os.write(payload.getBytes("UTF-8"));
-            os.flush();
-            os.close();
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+            }
 
             int httpCode = conn.getResponseCode();
             if (httpCode != 200) {
@@ -149,27 +150,27 @@ public class LlamaClient {
             }
 
             // Read streaming NDJSON response
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), "UTF-8"));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
 
-                String token = extractJsonString(line, "content");
-                if (token != null && !token.isEmpty()) {
-                    if (firstTokenTime < 0) {
-                        firstTokenTime = System.currentTimeMillis();
+                    String token = extractJsonString(line, "content");
+                    if (token != null && !token.isEmpty()) {
+                        if (firstTokenTime < 0) {
+                            firstTokenTime = System.currentTimeMillis();
+                        }
+                        fullResponse.append(token);
                     }
-                    fullResponse.append(token);
-                }
 
-                if (line.contains("\"done\":true") || line.contains("\"done\": true")) {
-                    evalTokens = extractJsonInt(line, "eval_count");
-                    evalDurationNs = extractJsonLong(line, "eval_duration");
-                    break;
+                    if (line.contains("\"done\":true") || line.contains("\"done\": true")) {
+                        evalTokens = extractJsonInt(line, "eval_count");
+                        evalDurationNs = extractJsonLong(line, "eval_duration");
+                        break;
+                    }
                 }
             }
-            reader.close();
 
         } catch (Exception e) {
             String errMsg = e.getClass().getSimpleName() + ": " + e.getMessage();

@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -72,11 +73,11 @@ public class LlamaClient {
      * @param systemPrompt  System prompt
      * @param history       List of pre-built JSON message objects (from jsonMessage())
      */
-    public LLMResult chatMultiTurn(String systemPrompt, List history) {
+    public LLMResult chatMultiTurn(String systemPrompt, List<String> history) {
         StringBuilder sb = new StringBuilder("[");
         sb.append(jsonMessage("system", systemPrompt));
-        for (int i = 0; i < history.size(); i++) {
-            sb.append(",").append((String) history.get(i));
+        for (String msg : history) {
+            sb.append(",").append(msg);
         }
         sb.append("]");
         return sendToLLM(sb.toString());
@@ -104,10 +105,10 @@ public class LlamaClient {
                 + "\"stream\":true,"
                 + "\"options\":{\"num_predict\":" + maxPredict + "}}";
 
-            OutputStream os = conn.getOutputStream();
-            os.write(payload.getBytes("UTF-8"));
-            os.flush();
-            os.close();
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+            }
 
             int httpCode = conn.getResponseCode();
             if (httpCode != 200) {
@@ -115,23 +116,23 @@ public class LlamaClient {
                 return new LLMResult("[HTTP " + httpCode + "]", elapsed, elapsed, 0, 0);
             }
 
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), "UTF-8"));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
-                String token = extractJsonString(line, "content");
-                if (token != null && !token.isEmpty()) {
-                    if (firstTokenTime < 0) firstTokenTime = System.currentTimeMillis();
-                    fullResponse.append(token);
-                }
-                if (line.contains("\"done\":true") || line.contains("\"done\": true")) {
-                    evalTokens = (int) extractJsonLong(line, "eval_count");
-                    evalDurationNs = extractJsonLong(line, "eval_duration");
-                    break;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    String token = extractJsonString(line, "content");
+                    if (token != null && !token.isEmpty()) {
+                        if (firstTokenTime < 0) firstTokenTime = System.currentTimeMillis();
+                        fullResponse.append(token);
+                    }
+                    if (line.contains("\"done\":true") || line.contains("\"done\": true")) {
+                        evalTokens = (int) extractJsonLong(line, "eval_count");
+                        evalDurationNs = extractJsonLong(line, "eval_duration");
+                        break;
+                    }
                 }
             }
-            reader.close();
 
         } catch (Exception e) {
             String errMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
