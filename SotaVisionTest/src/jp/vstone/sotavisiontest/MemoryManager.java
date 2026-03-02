@@ -1,16 +1,14 @@
 package jp.vstone.sotavisiontest;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Persists UserProfile data as a JSON file on disk.
@@ -107,9 +105,9 @@ public class MemoryManager {
         return new ArrayList<UserProfile>(profiles.values());
     }
 
-    /** Generate a unique userId based on timestamp + counter. */
+    /** Generate a unique userId using UUID. */
     public String generateUserId() {
-        return "user_" + System.currentTimeMillis() + "_" + profiles.size();
+        return "user_" + UUID.randomUUID().toString().replace("-", "");
     }
 
     // ----------------------------------------------------------------
@@ -126,16 +124,9 @@ public class MemoryManager {
         }
 
         try {
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            reader.close();
+            String content = new String(
+                Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8).trim();
 
-            String content = sb.toString().trim();
             if (content.isEmpty() || !content.startsWith("[")) {
                 log("Profile file is empty or malformed. Starting fresh.");
                 return;
@@ -163,18 +154,16 @@ public class MemoryManager {
     /** Save all profiles to the JSON file on disk. */
     public void saveProfiles() {
         try {
-            PrintWriter pw = new PrintWriter(
-                new OutputStreamWriter(new FileOutputStream(filePath), "UTF-8"));
-            pw.println("[");
-            int i = 0;
+            StringBuilder sb = new StringBuilder();
+            sb.append("[\n");
+            boolean first = true;
             for (UserProfile p : profiles.values()) {
-                if (i > 0) pw.println(",");
-                pw.print("  " + p.toJson());
-                i++;
+                if (!first) sb.append(",\n");
+                sb.append("  ").append(p.toJson());
+                first = false;
             }
-            pw.println();
-            pw.println("]");
-            pw.close();
+            sb.append("\n]\n");
+            Files.write(Paths.get(filePath), sb.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log("ERROR saving profiles: " + e.getMessage());
         }

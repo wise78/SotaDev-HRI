@@ -3,13 +3,15 @@ package jp.vstone.sotawhisper;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /**
  * Java 1.8 HTTP client for the Whisper STT server.
@@ -95,7 +97,7 @@ public class WhisperSTT {
 
         byte[] wavBytes;
         try {
-            wavBytes = readFileBytes(wavFile);
+            wavBytes = Files.readAllBytes(Paths.get(wavFilePath));
         } catch (IOException e) {
             log("ERROR: Cannot read file: " + e.getMessage());
             return new WhisperResult("", "", "", false, 0);
@@ -125,10 +127,10 @@ public class WhisperSTT {
             conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(READ_TIMEOUT_MS);
 
-            OutputStream os = conn.getOutputStream();
-            os.write(body);
-            os.flush();
-            os.close();
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+                os.flush();
+            }
 
             int httpCode = conn.getResponseCode();
             if (httpCode != 200) {
@@ -211,7 +213,7 @@ public class WhisperSTT {
             + "Content-Disposition: form-data; name=\"audio\"; filename=\""
             + filename + "\"\r\n"
             + "Content-Type: audio/wav\r\n\r\n";
-        out.write(header.getBytes("UTF-8"));
+        out.write(header.getBytes(StandardCharsets.UTF_8));
         out.write(fileBytes);
 
         // Translate part
@@ -219,12 +221,12 @@ public class WhisperSTT {
             String translatePart = "\r\n--" + boundary + "\r\n"
                 + "Content-Disposition: form-data; name=\"translate\"\r\n\r\n"
                 + "true";
-            out.write(translatePart.getBytes("UTF-8"));
+            out.write(translatePart.getBytes(StandardCharsets.UTF_8));
         }
 
         // Closing boundary
         String footer = "\r\n--" + boundary + "--\r\n";
-        out.write(footer.getBytes("UTF-8"));
+        out.write(footer.getBytes(StandardCharsets.UTF_8));
 
         return out.toByteArray();
     }
@@ -233,39 +235,16 @@ public class WhisperSTT {
     // File I/O
     // ----------------------------------------------------------------
 
-    private byte[] readFileBytes(File file) throws IOException {
-        FileInputStream fis = null;
-        try {
-            fis = new FileInputStream(file);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = fis.read(buf)) != -1) {
-                out.write(buf, 0, n);
-            }
-            return out.toByteArray();
-        } finally {
-            if (fis != null) {
-                try { fis.close(); } catch (IOException ignored) {}
-            }
-        }
-    }
-
     private String readResponseBody(InputStream is) throws IOException {
         if (is == null) return "";
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 sb.append(line);
             }
             return sb.toString();
-        } finally {
-            if (reader != null) {
-                try { reader.close(); } catch (IOException ignored) {}
-            }
         }
     }
 

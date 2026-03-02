@@ -4,9 +4,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Tiny embedded HTTP status server for remote monitoring.
@@ -27,9 +31,10 @@ public class StatusServer {
     private static final String TAG = "StatusServer";
 
     private final int port;
-    private final HashMap data;  // String key -> Object value
+    private final ConcurrentHashMap<String, Object> data;
     private ServerSocket serverSocket;
     private Thread serverThread;
+    private ExecutorService requestExecutor;
     private volatile boolean running = false;
     private final long startTime;
     private volatile UserMemory userMemory;  // optional, set after init
@@ -42,7 +47,7 @@ public class StatusServer {
 
     public StatusServer(int port) {
         this.port = port;
-        this.data = new HashMap();
+        this.data = new ConcurrentHashMap<String, Object>();
         this.startTime = System.currentTimeMillis();
 
         // Default values
@@ -72,17 +77,16 @@ public class StatusServer {
         this.languageListener = listener;
     }
 
-    /** Update a status field. Thread-safe. */
+    /** Update a status field. Thread-safe via ConcurrentHashMap. */
     public void update(String key, Object value) {
-        synchronized (data) {
-            data.put(key, value);
-        }
+        data.put(key, value);
     }
 
     /** Start the server in a daemon thread. */
     public void start() {
         if (running) return;
         running = true;
+        requestExecutor = Executors.newCachedThreadPool();
 
         serverThread = new Thread(new Runnable() {
             public void run() {
@@ -101,6 +105,7 @@ public class StatusServer {
         try {
             if (serverSocket != null) serverSocket.close();
         } catch (Exception e) { /* ignore */ }
+        if (requestExecutor != null) requestExecutor.shutdown();
         log("Stopped");
     }
 
@@ -124,7 +129,17 @@ public class StatusServer {
             try {
                 client = serverSocket.accept();
                 client.setSoTimeout(2000);
-                handleRequest(client);
+                final Socket clientRef = client;
+                client = null; // executor takes ownership
+                requestExecutor.submit(new Runnable() {
+                    public void run() {
+                        try {
+                            handleRequest(clientRef);
+                        } finally {
+                            try { clientRef.close(); } catch (Exception e) { /* ignore */ }
+                        }
+                    }
+                });
             } catch (java.net.SocketTimeoutException e) {
                 // Normal timeout, loop again
             } catch (Exception e) {
@@ -209,7 +224,7 @@ public class StatusServer {
                     if (r < 0) break;
                     read += r;
                 }
-                body = new String(bodyBytes, 0, read, "UTF-8");
+                body = new String(bodyBytes, 0, read, StandardCharsets.UTF_8);
             }
 
             // Route
@@ -227,15 +242,16 @@ public class StatusServer {
             }
 
             // CORS headers for browser access
+            byte[] responseBytes = responseJson.getBytes(StandardCharsets.UTF_8);
             String httpResponse = "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: application/json; charset=UTF-8\r\n"
                 + "Access-Control-Allow-Origin: *\r\n"
                 + "Connection: close\r\n"
-                + "Content-Length: " + responseJson.getBytes("UTF-8").length + "\r\n"
+                + "Content-Length: " + responseBytes.length + "\r\n"
                 + "\r\n"
                 + responseJson;
 
-            os.write(httpResponse.getBytes("UTF-8"));
+            os.write(httpResponse.getBytes(StandardCharsets.UTF_8));
             os.flush();
 
         } catch (Exception e) {
@@ -253,10 +269,7 @@ public class StatusServer {
     private String buildStatusJson() {
         long uptimeMs = System.currentTimeMillis() - startTime;
 
-        HashMap snapshot;
-        synchronized (data) {
-            snapshot = new HashMap(data);
-        }
+        Map<String, Object> snapshot = new HashMap<String, Object>(data);
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -265,10 +278,9 @@ public class StatusServer {
         sb.append("\"uptime\":").append(uptimeMs);
 
         // Add all data entries
-        Object[] keys = snapshot.keySet().toArray();
-        for (int i = 0; i < keys.length; i++) {
-            String key = (String) keys[i];
-            Object val = snapshot.get(key);
+        for (Map.Entry<String, Object> entry : snapshot.entrySet()) {
+            String key = entry.getKey();
+            Object val = entry.getValue();
             sb.append(",");
             sb.append("\"").append(escapeJson(key)).append("\":");
 
