@@ -24,7 +24,7 @@ SotaDev-HRI/
 
 ## Sub-projects
 
-### WhisperInteraction ⭐ (Main)
+### WhisperInteraction  (Main)
 
 **Path:** [`SotaWhisperTest/interaction/`](SotaWhisperTest/interaction/)
 
