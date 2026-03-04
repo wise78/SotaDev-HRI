@@ -234,6 +234,179 @@ class DataLogger:
 
 
 # ================================================================
+# Subtitle Window — large text display for users
+# ================================================================
+
+PHASE_DISPLAY = {
+    "idle":        ("Waiting...", "#90A4AE"),
+    "init":        ("Starting...", "#607D8B"),
+    "recognizing": ("Looking at you...", "#FF8C00"),
+    "greeting":    ("Speaking", "#66BB6A"),
+    "registering": ("Speaking", "#DAA520"),
+    "listening":   ("Listening...", "#26C6DA"),
+    "thinking":    ("Thinking...", "#FFCA28"),
+    "responding":  ("Speaking", "#43A047"),
+    "closing":     ("Goodbye", "#90A4AE"),
+    "shutdown":    ("Offline", "#F44336"),
+}
+
+SPEAKING_STATES = {"greeting", "responding", "registering", "closing"}
+
+# Japanese-capable fonts (Windows), in priority order
+_JP_FONTS = ["Meiryo", "Yu Gothic", "MS Gothic", "Noto Sans CJK JP", "Arial"]
+
+def _pick_jp_font():
+    """Pick the first available Japanese-capable font."""
+    try:
+        import tkinter.font as tkfont
+        available = tkfont.families()
+        for f in _JP_FONTS:
+            if f in available:
+                return f
+    except Exception:
+        pass
+    return "Meiryo"  # fallback — present on all modern Windows
+
+
+class SubtitleWindow(tk.Toplevel):
+    """Full-screen-friendly subtitle overlay showing what Sota is saying."""
+
+    # Font size limits
+    _FONT_SIZE_MAX = 48
+    _FONT_SIZE_MIN = 16
+
+    def __init__(self, master):
+        tk.Toplevel.__init__(self, master)
+        self.title("Sota Subtitle")
+        self.geometry("1200x600")
+        self.minsize(800, 400)
+        self.configure(bg="#111111")
+
+        self._fullscreen = False
+        self.bind("<F11>", self._toggle_fullscreen)
+        self.bind("<Escape>", self._exit_fullscreen)
+
+        self._jp_font = _pick_jp_font()
+        self._current_font_size = self._FONT_SIZE_MAX
+
+        # Phase indicator (top)
+        self.phase_label = tk.Label(
+            self, text="", font=(self._jp_font, 24),
+            fg="#90A4AE", bg="#111111", pady=20)
+        self.phase_label.pack(side="top", fill="x")
+
+        # Subtitle text (center) — expand to fill
+        self.subtitle_frame = tk.Frame(self, bg="#111111")
+        self.subtitle_frame.pack(side="top", fill="both", expand=True)
+
+        self.subtitle_label = tk.Label(
+            self.subtitle_frame, text="", font=(self._jp_font, self._FONT_SIZE_MAX),
+            fg="white", bg="#111111",
+            wraplength=1100, justify="center", pady=10)
+        self.subtitle_label.place(relx=0.5, rely=0.5, anchor="center")
+
+        # User text (bottom)
+        self.user_label = tk.Label(
+            self, text="", font=(self._jp_font, 18),
+            fg="#26C6DA", bg="#111111", pady=16)
+        self.user_label.pack(side="bottom", fill="x")
+
+        # Track resize for wraplength
+        self.bind("<Configure>", self._on_resize)
+
+        # Hint label
+        self.hint_label = tk.Label(
+            self, text="F11 = Fullscreen", font=("Consolas", 10),
+            fg="#444444", bg="#111111")
+        self.hint_label.place(relx=1.0, rely=1.0, anchor="se", x=-8, y=-4)
+
+    def _toggle_fullscreen(self, event=None):
+        self._fullscreen = not self._fullscreen
+        self.attributes("-fullscreen", self._fullscreen)
+
+    def _exit_fullscreen(self, event=None):
+        self._fullscreen = False
+        self.attributes("-fullscreen", False)
+
+    def _on_resize(self, event=None):
+        """Update wraplength when window resizes."""
+        w = self.winfo_width()
+        if w > 100:
+            self.subtitle_label.config(wraplength=w - 80)
+
+    def _calc_font_size(self, text):
+        """Calculate an appropriate font size based on text length and window width.
+        Longer text gets smaller font to fit within the window.
+        """
+        if not text:
+            return self._FONT_SIZE_MAX
+
+        text_len = len(text)
+        win_width = self.winfo_width() or 1200
+
+        # Approximate chars per line at max font size (rough: ~0.6 * font_size per char width)
+        chars_per_line_at_max = max(1, int(win_width / (self._FONT_SIZE_MAX * 0.55)))
+        estimated_lines = max(1, (text_len + chars_per_line_at_max - 1) // chars_per_line_at_max)
+
+        # Available height for subtitle (roughly 60% of window)
+        avail_height = max(200, int((self.winfo_height() or 600) * 0.55))
+
+        # Target: text should fit in available height
+        # Each line height ~ font_size * 1.4
+        if estimated_lines <= 2:
+            size = self._FONT_SIZE_MAX
+        elif text_len < 80:
+            size = 40
+        elif text_len < 120:
+            size = 34
+        elif text_len < 180:
+            size = 28
+        elif text_len < 250:
+            size = 24
+        else:
+            size = self._FONT_SIZE_MIN
+
+        # Also check: can we fit all lines vertically?
+        line_height = size * 1.5
+        recalc_cpl = max(1, int((win_width - 80) / (size * 0.55)))
+        recalc_lines = max(1, (text_len + recalc_cpl - 1) // recalc_cpl)
+        total_height = recalc_lines * line_height
+
+        while total_height > avail_height and size > self._FONT_SIZE_MIN:
+            size -= 2
+            line_height = size * 1.5
+            recalc_cpl = max(1, int((win_width - 80) / (size * 0.55)))
+            recalc_lines = max(1, (text_len + recalc_cpl - 1) // recalc_cpl)
+            total_height = recalc_lines * line_height
+
+        return max(self._FONT_SIZE_MIN, min(self._FONT_SIZE_MAX, size))
+
+    def update_display(self, state, sota_text, user_text):
+        """Called by ResearchGUI._update_ui() with latest data."""
+        # Phase
+        phase_text, phase_color = PHASE_DISPLAY.get(state, ("...", "#607D8B"))
+        self.phase_label.config(text=phase_text, fg=phase_color)
+
+        # Subtitle with dynamic font sizing
+        if state in SPEAKING_STATES and sota_text:
+            new_size = self._calc_font_size(sota_text)
+            if new_size != self._current_font_size:
+                self._current_font_size = new_size
+                self.subtitle_label.config(font=(self._jp_font, new_size))
+            self.subtitle_label.config(text=sota_text)
+        elif state not in SPEAKING_STATES:
+            # Reset to max font when not speaking
+            if self._current_font_size != self._FONT_SIZE_MAX:
+                self._current_font_size = self._FONT_SIZE_MAX
+                self.subtitle_label.config(font=(self._jp_font, self._FONT_SIZE_MAX))
+            self.subtitle_label.config(text="")
+
+        # User text
+        if user_text:
+            self.user_label.config(text=user_text)
+
+
+# ================================================================
 # Main GUI
 # ================================================================
 
@@ -260,6 +433,9 @@ class ResearchGUI:
         # Track last seen conversation to detect new turns
         self._last_user_text = ""
         self._last_sota_text = ""
+
+        # Subtitle window (opened on demand)
+        self.subtitle_window = None
 
         self._build_ui()
         self._log("Research Control GUI started.")
@@ -292,6 +468,10 @@ class ResearchGUI:
                                         bg="#c62828", fg="white",
                                         font=("Consolas", 9, "bold"), relief="sunken")
         self.conn_indicator.grid(row=0, column=5, padx=4)
+
+        self.subtitle_btn = ttk.Button(conn_frame, text="Subtitle",
+                                        command=self._open_subtitle_window)
+        self.subtitle_btn.grid(row=0, column=6, padx=(12, 4))
 
         # --- Main content: 3 panels ---
         main_pw = ttk.PanedWindow(self.root, orient="vertical")
@@ -670,6 +850,20 @@ class ResearchGUI:
             self._append_conv_log("system",
                                    "[Language changed to {}]".format(lang.upper()))
 
+    def _open_subtitle_window(self):
+        """Open (or focus) the subtitle display window."""
+        if self.subtitle_window is not None:
+            try:
+                self.subtitle_window.lift()
+                self.subtitle_window.focus_force()
+                return
+            except tk.TclError:
+                # Window was closed by user
+                self.subtitle_window = None
+
+        self.subtitle_window = SubtitleWindow(self.root)
+        self._log("Subtitle window opened.")
+
     def _toggle_connect(self):
         if self.polling:
             self._disconnect()
@@ -836,6 +1030,14 @@ class ResearchGUI:
                 self.lang_label.config(text=" JAPANESE ", bg="#C62828")
             else:
                 self.lang_label.config(text=" ENGLISH ", bg="#1565C0")
+
+        # Update subtitle window
+        if self.subtitle_window is not None:
+            try:
+                self.subtitle_window.update_display(state, sota_text, user_text)
+            except tk.TclError:
+                # Window was closed
+                self.subtitle_window = None
 
         # User profile
         name = data.get("userName", "") or ""

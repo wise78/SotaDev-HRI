@@ -115,6 +115,9 @@ public class WhisperInteraction {
     private UserMemory.UserProfile currentUser = null;
     private boolean isNewUser = false;
 
+    // Stored WhisperResult from name listen (for extracting origin)
+    private WhisperSTT.WhisperResult lastNameListenResult = null;
+
     // Conversation history for multi-turn (list of JSON message strings)
     private List conversationHistory = new ArrayList();
 
@@ -257,17 +260,31 @@ public class WhisperInteraction {
         motion.ServoOn();
         CRobotPose initPose = new CRobotPose();
         initPose.SetPose(
-            new Byte[]  {1, 2, 3, 4, 5, 6, 7, 8},
-            new Short[] {0, 0, 0, 0, 0, 0, 0, 0}
-        );
+            new Byte[]  {1,    2,     3, 4,   5, 6, 7, 8},
+            new Short[] {0, -900,     0, 900, 0, 0, 0, 0}
+        );  // Natural hanging pose: L_SHOULDER=-900, R_SHOULDER=+900
         initPose.setLED_Sota(Color.WHITE, Color.WHITE, 200, Color.WHITE);
-        motion.play(initPose, 500);
-        CRobotUtil.wait(500);
+        motion.play(initPose, 800);
+        CRobotUtil.wait(900);
 
         // 2. Camera (with face search enabled for recognition)
         camera = new CRoboCamera(CAMERA_DEVICE, motion);
         camera.setEnableFaceSearch(true);
         camera.setEnableAgeSexDetect(true);
+        // Log any faces already in the camera's in-memory list
+        try {
+            String[] savedUsers = camera.getAllUserNames();
+            if (savedUsers != null && savedUsers.length > 0) {
+                log("Camera has " + savedUsers.length + " registered faces in memory");
+                for (int i = 0; i < savedUsers.length; i++) {
+                    log("  - Registered face: " + savedUsers[i]);
+                }
+            } else {
+                log("No registered faces in camera memory (name-based recognition will be used for returning users)");
+            }
+        } catch (Exception e) {
+            log("WARN: Could not query camera face list: " + e.getMessage());
+        }
         camera.StartFaceTraking();
         log("Camera initialized (face search + age/sex detection enabled)");
 
@@ -377,6 +394,8 @@ public class WhisperInteraction {
                 updateState(STATE_IDLE);
                 currentState = STATE_IDLE;
                 resetSession();
+                // Restart face tracking after error recovery
+                try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
             }
 
             CRobotUtil.wait(50);
@@ -435,6 +454,15 @@ public class WhisperInteraction {
             detectedGender = (isMale != null && isMale.booleanValue()) ? "male" : "female";
         }
 
+        // Also try getUserFromList which may use a different matching strategy
+        if (faceUser != null && faceUser.isNewUser() && faceResult != null) {
+            FaceUser listUser = camera.getUserFromList(faceResult);
+            if (listUser != null && !listUser.isNewUser()) {
+                log("getUserFromList matched a known user: " + listUser.getName());
+                faceUser = listUser;
+            }
+        }
+
         if (!noMemory && faceUser != null && !faceUser.isNewUser()) {
             // Known user — load profile (only when memory is enabled)
             String userName = faceUser.getName();
@@ -469,8 +497,30 @@ public class WhisperInteraction {
             analyzeEthnicity(faceResult);
             updateUserStatus();
         } else {
-            // New face — run DeepFace ethnicity detection
+            // New face — but check if we have stored profiles (camera may have failed to match)
             log("New face detected (age~" + detectedAge + ", " + detectedGender + ")");
+
+            if (!noMemory && userMemory.getProfileCount() > 0) {
+                // There are known users — ask if this is a returning user
+                UserMemory.UserProfile matchedProfile = tryNameBasedRecognition();
+                if (matchedProfile != null) {
+                    // Returning user identified by name!
+                    log("Returning user identified by name: " + matchedProfile.name);
+                    currentUser = matchedProfile;
+                    isNewUser = false;
+                    // Re-register face for better future recognition
+                    reRegisterFaceForUser(matchedProfile.name);
+                    if (currentUser.preferredLanguage != null && !currentUser.preferredLanguage.isEmpty()) {
+                        recordDetectedLanguage(currentUser.preferredLanguage);
+                    }
+                    updateUserStatus();
+                    currentState = STATE_GREETING;
+                    updateState(STATE_GREETING);
+                    return;
+                }
+            }
+
+            // Genuinely new user
             currentUser = new UserMemory.UserProfile(userMemory.generateUserId(), "");
             currentUser.estimatedAge = detectedAge;
             currentUser.gender = detectedGender;
@@ -487,11 +537,225 @@ public class WhisperInteraction {
     }
 
     // ----------------------------------------------------------------
+    // Name-based returning user recognition (fallback when face fails)
+    // ----------------------------------------------------------------
+
+    /**
+     * When camera face recognition fails but we have profiles in memory,
+     * ask the user if they have visited before and try to match by name.
+     * Returns the matched UserProfile, or null if this is genuinely a new user.
+     */
+    private UserMemory.UserProfile tryNameBasedRecognition() {
+        // Stop face tracking temporarily so gestures/speech work
+        camera.StopFaceTraking();
+
+        String askRemember = "ja".equals(baseLanguage)
+            ? "こんにちは！前にお会いしたことはありますか？名前を教えてくれますか？"
+            : "Hello! Have we met before? What's your name?";
+        statusServer.update("lastSotaText", askRemember);
+        speechManager.speak(askRemember);
+
+        WhisperSTT.WhisperResult result = speechManager.listen(
+            LISTEN_DURATION_MS, shouldTranslateForCurrentMode());
+
+        // Restart face tracking
+        try { camera.StartFaceTraking(); } catch (Exception e) { /* ignore */ }
+
+        if (!result.ok) {
+            log("Name-based recognition: no speech detected");
+            return null;
+        }
+
+        String text = "ja".equals(baseLanguage) ? result.text : result.textEn;
+        if (text == null || text.isEmpty()) return null;
+        String lower = text.toLowerCase();
+        log("Name-based recognition response: " + text);
+
+        // Check for negative responses (new user)
+        String[] negatives = {"no", "not", "first time", "never", "new here",
+                              "haven't", "haven't met", "don't think so",
+                              "いいえ", "初めて", "会ったことない", "ない"};
+        for (int i = 0; i < negatives.length; i++) {
+            if (lower.contains(negatives[i])) {
+                log("Name-based recognition: user says they are new");
+                return null;
+            }
+        }
+
+        // Try to extract a name from the response
+        String candidateName = extractNameFromResponse(text);
+        if (candidateName == null || candidateName.isEmpty()) {
+            log("Name-based recognition: could not extract name from response");
+            return null;
+        }
+
+        log("Name-based recognition: candidate name = " + candidateName);
+
+        // Search profiles for a match (case-insensitive, fuzzy)
+        UserMemory.UserProfile match = userMemory.getProfileByName(candidateName);
+        if (match != null) {
+            log("Name-based recognition: EXACT match found -> " + match.name);
+            return match;
+        }
+
+        // Try fuzzy matching: check if any profile name starts with or contains the candidate
+        List allProfiles = userMemory.getAllProfiles();
+        String candidateLower = candidateName.toLowerCase();
+        for (int i = 0; i < allProfiles.size(); i++) {
+            UserMemory.UserProfile p = (UserMemory.UserProfile) allProfiles.get(i);
+            String profileNameLower = p.name.toLowerCase();
+            // Check: profile name starts with candidate, or candidate starts with profile name
+            if (profileNameLower.startsWith(candidateLower) || candidateLower.startsWith(profileNameLower)) {
+                log("Name-based recognition: FUZZY match '" + candidateName + "' -> '" + p.name + "'");
+                return p;
+            }
+            // Check: Levenshtein-like similarity for short names (1 char difference allowed)
+            if (Math.abs(profileNameLower.length() - candidateLower.length()) <= 1
+                    && profileNameLower.length() >= 3) {
+                int diffs = 0;
+                int minLen = Math.min(profileNameLower.length(), candidateLower.length());
+                for (int c = 0; c < minLen; c++) {
+                    if (profileNameLower.charAt(c) != candidateLower.charAt(c)) diffs++;
+                }
+                diffs += Math.abs(profileNameLower.length() - candidateLower.length());
+                if (diffs <= 1) {
+                    log("Name-based recognition: CLOSE match '" + candidateName + "' -> '" + p.name
+                        + "' (diffs=" + diffs + ")");
+                    return p;
+                }
+            }
+        }
+
+        log("Name-based recognition: no profile matches '" + candidateName + "'");
+        return null;
+    }
+
+    /**
+     * Extract a name from a "Have we met before?" response.
+     * Handles: "Yes, my name is Bijak", "Bijak", "I'm Bijak", "Yes, it's Bijak", etc.
+     */
+    private String extractNameFromResponse(String text) {
+        if (text == null || text.isEmpty()) return null;
+
+        // Strip common affirmative prefixes
+        String lower = text.toLowerCase();
+        String[] affirmatives = {"yes ", "yeah ", "yep ", "sure ", "of course ",
+                                 "yes, ", "yeah, ", "yep, ", "sure, ", "of course, ",
+                                 "はい、", "はい", "うん、", "うん"};
+        String cleaned = text;
+        for (int i = 0; i < affirmatives.length; i++) {
+            if (lower.startsWith(affirmatives[i])) {
+                cleaned = text.substring(affirmatives[i].length()).trim();
+                break;
+            }
+        }
+
+        // Now try name markers
+        String[] markers = {"my name is ", "name is ", "i'm ", "i am ", "it's ", "call me "};
+        String cleanedLower = cleaned.toLowerCase();
+        for (int i = 0; i < markers.length; i++) {
+            int idx = cleanedLower.indexOf(markers[i]);
+            if (idx >= 0) {
+                String after = cleaned.substring(idx + markers[i].length()).trim();
+                // Cut at comma/period
+                int cut = after.length();
+                for (int c = 0; c < after.length(); c++) {
+                    char ch = after.charAt(c);
+                    if (ch == ',' || ch == '.' || ch == '!' || ch == '?') {
+                        if (c > 0) { cut = c; break; }
+                    }
+                }
+                String name = after.substring(0, cut).trim();
+                // Take first 1-3 words
+                String[] words = name.split("\\s+");
+                if (words.length > 3) {
+                    name = words[0];
+                } else if (words.length > 1) {
+                    // Check if second word is a filler, not part of name
+                    String secondLower = words[1].toLowerCase();
+                    boolean isFiller = secondLower.equals("and") || secondLower.equals("from")
+                        || secondLower.equals("but") || secondLower.equals("do")
+                        || secondLower.equals("nice") || secondLower.equals("we");
+                    if (isFiller) {
+                        name = words[0];
+                    }
+                }
+                // Remove trailing punctuation
+                while (name.length() > 0) {
+                    char last = name.charAt(name.length() - 1);
+                    if (last == '.' || last == ',' || last == '!' || last == '?') {
+                        name = name.substring(0, name.length() - 1).trim();
+                    } else break;
+                }
+                if (!name.isEmpty() && name.length() <= 30) return name;
+            }
+        }
+
+        // If no marker, the whole response might just be a name (e.g. "Bijak")
+        // Take first word only if it's short enough and not a common word
+        String[] words = cleaned.split("\\s+");
+        if (words.length <= 3 && cleaned.length() <= 30) {
+            String candidate = words[0].trim();
+            // Remove trailing punctuation
+            while (candidate.length() > 0) {
+                char last = candidate.charAt(candidate.length() - 1);
+                if (last == '.' || last == ',' || last == '!' || last == '?') {
+                    candidate = candidate.substring(0, candidate.length() - 1).trim();
+                } else break;
+            }
+            // Don't return common words as names
+            String candLower = candidate.toLowerCase();
+            String[] commonWords = {"yes", "yeah", "yep", "no", "hi", "hello", "hey", "we", "have",
+                                    "do", "you", "remember", "met", "before"};
+            boolean isCommon = false;
+            for (int i = 0; i < commonWords.length; i++) {
+                if (candLower.equals(commonWords[i])) { isCommon = true; break; }
+            }
+            if (!isCommon && candidate.length() >= 2) return candidate;
+        }
+
+        return null;
+    }
+
+    /**
+     * Re-register a returning user's face (since camera failed to match).
+     * This updates the face database so next time camera recognition works.
+     */
+    private void reRegisterFaceForUser(String name) {
+        try {
+            FaceDetectResult faceResult = camera.getDetectResult();
+            if (faceResult != null && faceResult.isDetect()) {
+                // First remove old face data (if exists) to avoid duplicates
+                try { camera.removeUser(name); } catch (Exception e) { /* ignore */ }
+
+                FaceUser user = camera.getUser(faceResult);
+                if (user != null) {
+                    user.setName(name);
+                    int regCode = camera.addUserwithErrorCode(user);
+                    if (regCode == 1) {
+                        log("Re-registered face for returning user: " + name);
+                    } else {
+                        log("WARN: Face re-registration failed (code=" + regCode + ") for: " + name);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log("WARN: Error re-registering face: " + e.getMessage());
+        }
+    }
+
+    // ----------------------------------------------------------------
     // State: GREETING — say hello (personalized or generic)
     // ----------------------------------------------------------------
 
     private void handleGreeting() {
         log("--- GREETING ---");
+
+        // Stop face tracking so its continuous motion.play() calls
+        // don't interrupt gesture arm/body servo interpolation.
+        camera.StopFaceTraking();
+        log("Face tracking paused for gesture animation");
+
         gestureManager.setState(STATE_GREETING);
         conversationTurn = 0;
         silenceRetryCount = 0;
@@ -598,6 +862,7 @@ public class WhisperInteraction {
     private String listenAndExtractName(int timeoutMs) {
         WhisperSTT.WhisperResult result = speechManager.listen(
             timeoutMs, shouldTranslateForCurrentMode());
+        lastNameListenResult = result;
         if (!result.ok) return null;
 
         String raw;
@@ -654,14 +919,42 @@ public class WhisperInteraction {
             if (raw.isEmpty()) return null;
             log("Name listen (EN): " + raw);
 
-            // Strip English prefixes
-            String[] enPrefixes = {"my name is ", "i'm ", "i am ", "it's ", "call me ",
-                                   "this is ", "the name is "};
+            // First, check if "my name is" appears mid-sentence and extract name from there
+            String[] enNameMarkers = {"my name is ", "name is ", "call me ", "i'm called ", "i am called "};
             String lower = raw.toLowerCase();
-            for (int i = 0; i < enPrefixes.length; i++) {
-                if (lower.startsWith(enPrefixes[i])) {
-                    raw = raw.substring(enPrefixes[i].length()).trim();
+            boolean foundMarker = false;
+            for (int i = 0; i < enNameMarkers.length; i++) {
+                int idx = lower.indexOf(enNameMarkers[i]);
+                if (idx >= 0) {
+                    raw = raw.substring(idx + enNameMarkers[i].length()).trim();
+                    // Cut at first comma, period, or sentence boundary — anything after is not the name
+                    int cut = -1;
+                    for (int c = 0; c < raw.length(); c++) {
+                        char ch = raw.charAt(c);
+                        if (ch == ',' || ch == '.' || ch == '!' || ch == '?') {
+                            cut = c;
+                            break;
+                        }
+                    }
+                    if (cut > 0) {
+                        raw = raw.substring(0, cut).trim();
+                    }
+                    log("Extracted name after marker '" + enNameMarkers[i].trim() + "': " + raw);
+                    foundMarker = true;
                     break;
+                }
+            }
+
+            // If no mid-sentence marker found, try stripping leading prefixes
+            if (!foundMarker) {
+                String[] enPrefixes = {"my name is ", "i'm ", "i am ", "it's ", "call me ",
+                                       "this is ", "the name is "};
+                lower = raw.toLowerCase();
+                for (int i = 0; i < enPrefixes.length; i++) {
+                    if (lower.startsWith(enPrefixes[i])) {
+                        raw = raw.substring(enPrefixes[i].length()).trim();
+                        break;
+                    }
                 }
             }
         }
@@ -708,6 +1001,17 @@ public class WhisperInteraction {
             }
         }
 
+        // Final cleanup: remove any trailing punctuation (e.g. comma after first-word extraction)
+        while (raw.length() > 0) {
+            char last = raw.charAt(raw.length() - 1);
+            if (last == '.' || last == ',' || last == '!' || last == '?' || last == '\u3002'
+                || last == '\u3001' || last == '\uff01') {
+                raw = raw.substring(0, raw.length() - 1).trim();
+            } else {
+                break;
+            }
+        }
+
         log("Name extracted: " + raw);
         return raw.isEmpty() ? null : raw;
     }
@@ -745,17 +1049,26 @@ public class WhisperInteraction {
         currentUser.name = name;
         statusServer.update("userName", name);
 
-        // Register face with camera
+        // Register face with camera (with persistence)
         FaceDetectResult faceResult = camera.getDetectResult();
         if (faceResult != null && faceResult.isDetect()) {
             FaceUser user = camera.getUser(faceResult);
             if (user != null) {
                 user.setName(name);
-                boolean registered = camera.addUser(user);
-                if (registered) {
+                // Use addUserwithErrorCode for better diagnostics
+                int regCode = camera.addUserwithErrorCode(user);
+                if (regCode == 1) {
                     log("Face registered for: " + name);
                 } else {
-                    log("WARN: Face registration failed for: " + name);
+                    log("WARN: Face registration failed (code=" + regCode + ") for: " + name);
+                    String errMsg = "unknown error";
+                    if (regCode == -100) errMsg = "FaceResult not found";
+                    else if (regCode == -201) errMsg = "pitch angle out of range";
+                    else if (regCode == -202) errMsg = "roll angle out of range";
+                    else if (regCode == -203) errMsg = "yaw angle out of range";
+                    else if (regCode == -300) errMsg = "face size out of range";
+                    else if (regCode == -400) errMsg = "low focus score";
+                    log("  Registration error: " + errMsg);
                     // Retry with fresh detection
                     CRobotUtil.wait(500);
                     faceResult = camera.getDetectResult();
@@ -763,74 +1076,108 @@ public class WhisperInteraction {
                         user = camera.getUser(faceResult);
                         if (user != null && user.isNewUser()) {
                             user.setName(name);
-                            registered = camera.addUser(user);
-                            log(registered ? "Face registered on retry" : "Face registration failed on retry");
+                            regCode = camera.addUserwithErrorCode(user);
+                            if (regCode == 1) {
+                                log("Face registered on retry");
+                            } else {
+                                log("Face registration failed on retry (code=" + regCode + ")");
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Step 2: Culture/origin detection via language
-        String askOrigin = "ja".equals(baseLanguage)
-            ? name + "さん、よろしくね！どこから来たの？"
-            : "Nice to meet you, " + name + "! Where are you from?";
-        statusServer.update("lastSotaText", askOrigin);
-        speechManager.speak(askOrigin);
+        // Step 2: Culture/origin detection
+        // First, check if origin was already mentioned in the name response
+        String preExtractedOrigin = "";
+        if (lastNameListenResult != null && lastNameListenResult.ok) {
+            String nameRespText = "ja".equals(baseLanguage)
+                ? lastNameListenResult.text : lastNameListenResult.textEn;
+            preExtractedOrigin = extractOriginFromText(nameRespText);
+            if (!preExtractedOrigin.isEmpty()) {
+                log("Origin extracted from name response: " + preExtractedOrigin);
+            }
+        }
 
-        WhisperSTT.WhisperResult originResult = speechManager.listen(
-            LISTEN_DURATION_MS, shouldTranslateForCurrentMode());
-        if (originResult.ok && (originResult.text.length() > 0 || originResult.textEn.length() > 0)) {
-            // Store detected language
-            currentUser.detectedLanguage = originResult.language;
-            lastDetectedLang = originResult.language;
-            recordDetectedLanguage(originResult.language);
+        boolean originIsSpecific = !preExtractedOrigin.isEmpty() && !isGenericRegion(preExtractedOrigin);
+        boolean originIsGeneric  = !preExtractedOrigin.isEmpty() && isGenericRegion(preExtractedOrigin);
 
-            // Try to extract origin — use both original and English text
-            String originText = originResult.textEn.trim();
-            String originOriginal = originResult.text.trim();
-            log("Origin response [" + originResult.language + "]: " + originOriginal
-                + " (en: " + originText + ")");
+        if (originIsSpecific) {
+            // User already told us a specific country — confirm and ask a follow-up question
+            currentUser.origin = preExtractedOrigin;
+            String greet = "ja".equals(baseLanguage)
+                ? name + "さん、よろしくね！" + preExtractedOrigin + "、いいね！" + preExtractedOrigin + "で好きなことは何？"
+                : "Nice to meet you, " + name + "! Oh, " + preExtractedOrigin + ", that's wonderful! What do you enjoy most about living in " + preExtractedOrigin + "?";
+            statusServer.update("lastSotaText", greet);
+            speechManager.speak(greet);
+            log("Origin already known (specific): " + preExtractedOrigin + ", skipping origin question");
+        } else {
+            // Need to ask about origin
+            String askOrigin;
+            if (originIsGeneric) {
+                // Generic region (e.g. "Asia") — ask for specific country
+                currentUser.origin = preExtractedOrigin;
+                askOrigin = "ja".equals(baseLanguage)
+                    ? name + "さん、よろしくね！" + preExtractedOrigin + "のどの国から来たの？"
+                    : "Nice to meet you, " + name + "! Which country in " + preExtractedOrigin + " are you from?";
+                log("Origin is generic region: " + preExtractedOrigin + ", asking for specific country");
+            } else {
+                askOrigin = "ja".equals(baseLanguage)
+                    ? name + "さん、よろしくね！どこから来たの？"
+                    : "Nice to meet you, " + name + "! Where are you from?";
+            }
+            statusServer.update("lastSotaText", askOrigin);
+            speechManager.speak(askOrigin);
 
-            // JA mode: try original text first (Japanese patterns like "日本から来ました")
-            // EN mode: try English translation first
-            if ("ja".equals(baseLanguage)) {
-                currentUser.origin = extractOrigin(originOriginal);
-                if (currentUser.origin.isEmpty() && !originText.isEmpty()
-                        && !originText.equals(originOriginal)) {
+            WhisperSTT.WhisperResult originResult = speechManager.listen(
+                LISTEN_DURATION_MS, shouldTranslateForCurrentMode());
+            if (originResult.ok && (originResult.text.length() > 0 || originResult.textEn.length() > 0)) {
+                // Store detected language
+                currentUser.detectedLanguage = originResult.language;
+                lastDetectedLang = originResult.language;
+                recordDetectedLanguage(originResult.language);
+
+                String originText = originResult.textEn.trim();
+                String originOriginal = originResult.text.trim();
+                log("Origin response [" + originResult.language + "]: " + originOriginal
+                    + " (en: " + originText + ")");
+
+                if ("ja".equals(baseLanguage)) {
+                    currentUser.origin = extractOrigin(originOriginal);
+                    if (currentUser.origin.isEmpty() && !originText.isEmpty()
+                            && !originText.equals(originOriginal)) {
+                        currentUser.origin = extractOrigin(originText);
+                    }
+                } else {
                     currentUser.origin = extractOrigin(originText);
+                    if (currentUser.origin.isEmpty() && !originOriginal.equals(originText)) {
+                        currentUser.origin = extractOrigin(originOriginal);
+                    }
+                }
+                if (currentUser.origin.isEmpty()) {
+                    String inferred = UserMemory.languageToCountry(originResult.language);
+                    if (inferred != null) {
+                        currentUser.origin = localizeCountryName(inferred);
+                        log("Inferred origin from language: " + currentUser.origin);
+                    }
+                }
+
+                currentUser.preferredLanguage = originResult.language;
+
+                if (!currentUser.origin.isEmpty()) {
+                    String confirm = "ja".equals(baseLanguage)
+                        ? "へえ、" + currentUser.origin + "！すごいね！" + currentUser.origin + "で好きなことは何？"
+                        : "Oh, " + currentUser.origin + "! That's wonderful! What do you enjoy most about " + currentUser.origin + "?";
+                    statusServer.update("lastSotaText", confirm);
+                    speechManager.speak(confirm);
                 }
             } else {
-                currentUser.origin = extractOrigin(originText);
-                if (currentUser.origin.isEmpty() && !originOriginal.equals(originText)) {
-                    currentUser.origin = extractOrigin(originOriginal);
-                }
-            }
-            if (currentUser.origin.isEmpty()) {
-                // If couldn't extract, try language-based inference
-                String inferred = UserMemory.languageToCountry(originResult.language);
+                String inferred = UserMemory.languageToCountry(lastDetectedLang);
                 if (inferred != null) {
                     currentUser.origin = localizeCountryName(inferred);
-                    log("Inferred origin from language: " + currentUser.origin);
+                    log("No origin response, inferred from language: " + currentUser.origin);
                 }
-            }
-
-            currentUser.preferredLanguage = originResult.language;
-
-            // Confirm
-            if (!currentUser.origin.isEmpty()) {
-                String confirm = "ja".equals(baseLanguage)
-                    ? "へえ、" + currentUser.origin + "！すごいね！"
-                    : "Oh, " + currentUser.origin + "! That's wonderful!";
-                statusServer.update("lastSotaText", confirm);
-                speechManager.speak(confirm);
-            }
-        } else {
-            // Couldn't hear origin, try language inference
-            String inferred = UserMemory.languageToCountry(lastDetectedLang);
-            if (inferred != null) {
-                currentUser.origin = localizeCountryName(inferred);
-                log("No origin response, inferred from language: " + currentUser.origin);
             }
         }
 
@@ -839,6 +1186,10 @@ public class WhisperInteraction {
         userMemory.addProfile(currentUser);
         updateUserStatus();
         log("Profile saved: " + currentUser);
+
+        // Restart face tracking so face presence checks work during conversation
+        try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
+        log("Face tracking resumed after registration");
 
         currentState = STATE_LISTENING;
         updateState(STATE_LISTENING);
@@ -893,6 +1244,10 @@ public class WhisperInteraction {
         statusServer.update("lastDetectedLang", result.language);
 
         log("Heard [" + result.language + "]: " + result.text);
+
+        // Check for name correction (e.g. "No, my name is Bijak")
+        String userTextForCheck = "ja".equals(baseLanguage) ? result.text : result.textEn;
+        checkAndHandleNameCorrection(userTextForCheck);
 
         // Add to conversation history
         conversationHistory.add(LlamaClient.jsonMessage("user", getUserMessageForLlm(result)));
@@ -1046,6 +1401,10 @@ public class WhisperInteraction {
         log("Cooldown " + COOLDOWN_MS + "ms...");
         CRobotUtil.wait(COOLDOWN_MS);
 
+        // Restart face tracking for idle face detection
+        camera.StartFaceTraking();
+        log("Face tracking resumed");
+
         currentState = STATE_IDLE;
         updateState(STATE_IDLE);
         log("State: IDLE -- waiting for face...");
@@ -1128,6 +1487,25 @@ public class WhisperInteraction {
                     sb.append("Previous conversations: ").append(currentUser.shortMemorySummary).append(" ");
                 }
                 sb.append("You remember this person. Use their name throughout the conversation. ");
+
+                // Social state determines conversation style
+                String social = currentUser.socialState;
+                if (UserMemory.SOCIAL_CLOSE.equals(social)) {
+                    sb.append("You are CLOSE FRIENDS with ").append(currentUser.name).append(". ");
+                    sb.append("Talk casually like best friends: use humor, inside jokes, playful teasing, and show deep familiarity. ");
+                    sb.append("Use informal language, contractions, and exclamations. ");
+                    sb.append("Reference shared history naturally and ask deeper personal questions. ");
+                } else if (UserMemory.SOCIAL_FRIENDLY.equals(social)) {
+                    sb.append("You are GOOD FRIENDS with ").append(currentUser.name).append(". ");
+                    sb.append("Be warm and relaxed. Share your own 'opinions' and be more personal. ");
+                    sb.append("Use their name casually. Ask about their life, feelings, and experiences. ");
+                } else if (UserMemory.SOCIAL_ACQUAINTANCE.equals(social)) {
+                    sb.append("You are getting to know ").append(currentUser.name).append(". ");
+                    sb.append("Be friendly and interested but appropriately polite. ");
+                    sb.append("Show you remember previous conversations and build on them. ");
+                } else {
+                    sb.append("This is a new friendship. Be polite, warm, and welcoming. ");
+                }
             } else {
                 // NO-REMEMBER: act as if first meeting
                 sb.append("This is your first time meeting this person. ");
@@ -1153,7 +1531,13 @@ public class WhisperInteraction {
               .append(". ");
         }
 
-        sb.append("Keep your response under 2 sentences. ");
+        sb.append("Keep your response to 1-2 SHORT sentences maximum. Be concise. ");
+        sb.append("ALWAYS end your response with a question to keep the conversation going. ");
+        sb.append("Ask about the user's interests, hobbies, daily life, opinions, or experiences. ");
+        sb.append("Do NOT ask about their name or where they are from — you already know that. ");
+        sb.append("If the user corrects their name (e.g. 'No, my name is X'), acknowledge the correction naturally and use the new name. ");
+        sb.append("The user's speech is transcribed by Whisper AI which sometimes makes errors, especially with non-English speakers. ");
+        sb.append("If the transcription looks garbled or nonsensical, try to infer the user's intent from context and respond naturally. Do not repeat garbled text. ");
         sb.append("Be warm, friendly, and natural. ");
         sb.append("Show genuine interest in the user and maintain cultural awareness throughout the conversation.");
 
@@ -1168,6 +1552,7 @@ public class WhisperInteraction {
         conversationTurn = 0;
         silenceRetryCount = 0;
         lastWhisperResult = null;
+        lastNameListenResult = null;
         pendingLLMResponse = null;
         lastDetectedLang = "en";
         currentUser = null;
@@ -1394,6 +1779,213 @@ public class WhisperInteraction {
         return country;
     }
 
+    /**
+     * Extract origin from a text that may contain "from [place]" anywhere in the sentence.
+     * Used to detect origin info in the name response (e.g. "I'm from Indonesia, my name is Bijak").
+     * Handles negation ("I'm NOT from Europe, I'm from Asia" → returns "Asia").
+     */
+    private String extractOriginFromText(String text) {
+        if (text == null || text.isEmpty()) return "";
+        String lower = text.toLowerCase();
+
+        String[] fromPatterns = {"i'm from ", "i am from ", "i come from ", "come from "};
+        String lastOrigin = "";
+
+        for (int p = 0; p < fromPatterns.length; p++) {
+            int searchFrom = 0;
+            while (true) {
+                int idx = lower.indexOf(fromPatterns[p], searchFrom);
+                if (idx < 0) break;
+
+                // Check for negation ("not from", "n't from")
+                boolean negated = false;
+                if (idx >= 4) {
+                    String before = lower.substring(Math.max(0, idx - 5), idx).trim();
+                    if (before.endsWith("not") || before.endsWith("n't")) negated = true;
+                }
+
+                if (!negated) {
+                    String after = text.substring(idx + fromPatterns[p].length()).trim();
+                    // Take until comma, period, or connecting words
+                    int end = after.length();
+                    for (int i = 0; i < after.length(); i++) {
+                        char c = after.charAt(i);
+                        if (c == ',' || c == '.' || c == '!' || c == '?') {
+                            end = i;
+                            break;
+                        }
+                    }
+                    String origin = after.substring(0, end).trim();
+                    // Remove trailing punctuation
+                    while (origin.length() > 0) {
+                        char last = origin.charAt(origin.length() - 1);
+                        if (last == '.' || last == ',' || last == '!' || last == '?') {
+                            origin = origin.substring(0, origin.length() - 1).trim();
+                        } else break;
+                    }
+                    if (!origin.isEmpty() && origin.length() <= 30) {
+                        lastOrigin = origin;
+                    }
+                }
+                searchFrom = idx + fromPatterns[p].length();
+            }
+        }
+
+        // Capitalize first letter
+        if (!lastOrigin.isEmpty() && lastOrigin.charAt(0) >= 'a' && lastOrigin.charAt(0) <= 'z') {
+            lastOrigin = lastOrigin.substring(0, 1).toUpperCase() + lastOrigin.substring(1);
+        }
+
+        return lastOrigin;
+    }
+
+    /** Check if an origin string is a generic region (not a specific country). */
+    private boolean isGenericRegion(String origin) {
+        if (origin == null || origin.isEmpty()) return false;
+        String lower = origin.toLowerCase();
+        String[] genericRegions = {"asia", "europe", "africa", "america",
+            "europe or america", "south america", "north america",
+            "middle east", "southeast asia", "east asia", "central asia",
+            "latin america", "the middle east"};
+        for (int i = 0; i < genericRegions.length; i++) {
+            if (lower.equals(genericRegions[i])) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if user is correcting their name during conversation.
+     * Patterns: "my name is X", "no my name is X", "actually my name is X", etc.
+     * If detected, updates currentUser.name and userMemory.
+     *
+     * GUARDED against Whisper hallucinations:
+     *   - Name must start with uppercase letter (proper noun)
+     *   - Name must not contain numbers or unusual characters
+     *   - Name must be at least 2 characters long
+     *   - Name must not match known Whisper hallucination words
+     *   - Name must contain at least one vowel (not random consonants)
+     */
+    private void checkAndHandleNameCorrection(String text) {
+        if (currentUser == null || text == null || text.isEmpty()) return;
+        String lower = text.toLowerCase();
+
+        // Only trigger if there's an EXPLICIT correction indicator + name marker together
+        boolean hasCorrection = lower.contains("no,") || lower.contains("no ") || lower.contains("not ")
+            || lower.contains("actually") || lower.contains("wrong")
+            || lower.contains("incorrect") || lower.contains("real name")
+            || lower.contains("correct name");
+        if (!hasCorrection) return;
+
+        // Must also have a name marker — correction indicator alone is not enough
+        boolean hasNameMarker = lower.contains("my name is ") || lower.contains("my real name is ")
+            || lower.contains("correct name is ") || lower.contains("call me ");
+        if (!hasNameMarker) return;
+
+        String[] markers = {"my name is ", "my real name is ", "correct name is ", "call me "};
+
+        for (int i = 0; i < markers.length; i++) {
+            int idx = lower.indexOf(markers[i]);
+            if (idx >= 0) {
+                String after = text.substring(idx + markers[i].length()).trim();
+                // Take until comma, period, or end
+                int end = after.length();
+                for (int j = 0; j < after.length(); j++) {
+                    char c = after.charAt(j);
+                    if (c == ',' || c == '.' || c == '!' || c == '?') {
+                        if (j > 0) { end = j; break; }
+                    }
+                }
+                String newName = after.substring(0, end).trim();
+                // Strip trailing punctuation
+                while (newName.length() > 0) {
+                    char last = newName.charAt(newName.length() - 1);
+                    if (last == '.' || last == ',' || last == '!' || last == '?') {
+                        newName = newName.substring(0, newName.length() - 1).trim();
+                    } else break;
+                }
+                // Only take first word for correction (avoid "Bijak, kosher name" garbage)
+                String[] words = newName.split("\\s+");
+                newName = words[0];
+                // Remove trailing punctuation from first word
+                while (newName.length() > 0) {
+                    char last = newName.charAt(newName.length() - 1);
+                    if (last == '.' || last == ',' || last == '!' || last == '?') {
+                        newName = newName.substring(0, newName.length() - 1).trim();
+                    } else break;
+                }
+
+                // === HALLUCINATION GUARD ===
+                if (newName.isEmpty() || newName.length() < 2) {
+                    log("Name correction REJECTED (too short): '" + newName + "'");
+                    return;
+                }
+                if (newName.length() > 20) {
+                    log("Name correction REJECTED (too long): '" + newName + "'");
+                    return;
+                }
+                // Must start with uppercase letter (proper noun)
+                char firstChar = newName.charAt(0);
+                if (firstChar < 'A' || firstChar > 'Z') {
+                    log("Name correction REJECTED (not capitalized): '" + newName + "'");
+                    return;
+                }
+                // Must contain at least one vowel (not random consonants like "VR", "Bjg")
+                String nameLower = newName.toLowerCase();
+                boolean hasVowel = false;
+                for (int c = 0; c < nameLower.length(); c++) {
+                    char ch = nameLower.charAt(c);
+                    if (ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u') {
+                        hasVowel = true;
+                        break;
+                    }
+                }
+                if (!hasVowel) {
+                    log("Name correction REJECTED (no vowels): '" + newName + "'");
+                    return;
+                }
+                // Must not contain digits or weird chars
+                boolean hasDigitOrWeird = false;
+                for (int c = 0; c < newName.length(); c++) {
+                    char ch = newName.charAt(c);
+                    if ((ch >= '0' && ch <= '9') || ch == '#' || ch == '@' || ch == '&'
+                            || ch == '*' || ch == '+' || ch == '=' || ch == '<' || ch == '>') {
+                        hasDigitOrWeird = true;
+                        break;
+                    }
+                }
+                if (hasDigitOrWeird) {
+                    log("Name correction REJECTED (contains digits/symbols): '" + newName + "'");
+                    return;
+                }
+                // Reject known Whisper hallucination patterns
+                String[] hallucinations = {"vr", "do", "the", "you", "it", "so", "no",
+                    "thank", "thanks", "please", "see", "have", "that", "this", "what",
+                    "oh", "ah", "um", "uh", "kosher", "mahbuk", "bjag", "bjg"};
+                boolean isHallucination = false;
+                for (int h = 0; h < hallucinations.length; h++) {
+                    if (nameLower.equals(hallucinations[h])) {
+                        isHallucination = true;
+                        break;
+                    }
+                }
+                if (isHallucination) {
+                    log("Name correction REJECTED (known hallucination): '" + newName + "'");
+                    return;
+                }
+
+                // All guards passed — accept the correction
+                if (!newName.equalsIgnoreCase(currentUser.name)) {
+                    String oldName = currentUser.name;
+                    currentUser.name = newName;
+                    userMemory.updateProfile(currentUser);
+                    statusServer.update("userName", newName);
+                    log("Name correction ACCEPTED: '" + oldName + "' -> '" + newName + "'");
+                }
+                return;
+            }
+        }
+    }
+
     /** Extract origin from user response text (English translation). */
     private String extractOrigin(String text) {
         if (text == null || text.isEmpty()) return "";
@@ -1579,8 +2171,18 @@ public class WhisperInteraction {
             return !original.isEmpty() ? original : english;
         }
 
-        // EN mode: prefer English translation
-        if (!english.isEmpty()) return english;
+        // EN mode: always prefer the English translation — especially important for
+        // non-English speakers where the original transcription is often garbled
+        // but the Whisper English translation is more usable.
+        if (!english.isEmpty()) {
+            // If original is in a different language and we have an English translation,
+            // always use English to avoid feeding garbled text to the LLM
+            if (result.language != null && !"en".equals(result.language)
+                    && !original.equals(english)) {
+                return english;
+            }
+            return english;
+        }
         return original;
     }
 
