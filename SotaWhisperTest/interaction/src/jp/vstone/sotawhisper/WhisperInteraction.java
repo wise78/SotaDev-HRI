@@ -1107,8 +1107,8 @@ public class WhisperInteraction {
             // User already told us a specific country — confirm and ask a follow-up question
             currentUser.origin = preExtractedOrigin;
             String greet = "ja".equals(baseLanguage)
-                ? name + "さん、よろしくね！" + preExtractedOrigin + "、いいね！" + preExtractedOrigin + "で好きなことは何？"
-                : "Nice to meet you, " + name + "! Oh, " + preExtractedOrigin + ", that's wonderful! What do you enjoy most about living in " + preExtractedOrigin + "?";
+                ? name + "さん、よろしくね！" + preExtractedOrigin + "から来たんだ、いいね！" + preExtractedOrigin + "で好きなことは何？"
+                : "Nice to meet you, " + name + "! " + preExtractedOrigin + ", that's cool! What do you enjoy most about living there?";
             statusServer.update("lastSotaText", greet);
             speechManager.speak(greet);
             log("Origin already known (specific): " + preExtractedOrigin + ", skipping origin question");
@@ -1332,26 +1332,34 @@ public class WhisperInteraction {
         conversationTurn++;
         statusServer.update("turn", Integer.valueOf(conversationTurn));
 
-        // Check if user is still present (face detection)
-        int noFaceCount = 0;
-        for (int i = 0; i < FACE_GONE_THRESHOLD; i++) {
-            FaceDetectResult faceCheck = camera.getDetectResult();
-            if (faceCheck != null && faceCheck.isDetect()) {
-                noFaceCount = 0;
-                break;
+        // During active conversation, do NOT close based on face-loss alone.
+        // The user may look away (at laptop subtitles, at notes, etc.) without
+        // intending to leave.  Goodbye is triggered only by:
+        //   1. User says goodbye (detected in handleListening -> isGoodbye)
+        //   2. Repeated silence (MAX_SILENCE_RETRIES reached in handleListening)
+        // Face check is only used before conversation starts (in IDLE state).
+        if (conversationTurn <= 1) {
+            // First turn: user may have wandered off before conversation really started
+            int noFaceCount = 0;
+            for (int i = 0; i < FACE_GONE_THRESHOLD; i++) {
+                FaceDetectResult faceCheck = camera.getDetectResult();
+                if (faceCheck != null && faceCheck.isDetect()) {
+                    noFaceCount = 0;
+                    break;
+                }
+                noFaceCount++;
+                if (i < FACE_GONE_THRESHOLD - 1) {
+                    CRobotUtil.wait(500);
+                }
             }
-            noFaceCount++;
-            if (i < FACE_GONE_THRESHOLD - 1) {
-                CRobotUtil.wait(500);
+            if (noFaceCount >= FACE_GONE_THRESHOLD) {
+                log("User left before conversation started (no face " + FACE_GONE_THRESHOLD + " times). Closing.");
+                currentState = STATE_CLOSING;
+                updateState(STATE_CLOSING);
+                return;
             }
         }
-
-        if (noFaceCount >= FACE_GONE_THRESHOLD) {
-            log("User left (no face detected " + FACE_GONE_THRESHOLD + " times). Closing.");
-            currentState = STATE_CLOSING;
-            updateState(STATE_CLOSING);
-            return;
-        }
+        // else: conversation active, skip face check — rely on verbal goodbye / silence
 
         currentState = STATE_LISTENING;
         updateState(STATE_LISTENING);
@@ -1806,9 +1814,20 @@ public class WhisperInteraction {
 
                 if (!negated) {
                     String after = text.substring(idx + fromPatterns[p].length()).trim();
-                    // Take until comma, period, or connecting words
+                    // Take until comma, period, or connecting words/phrases
                     int end = after.length();
-                    for (int i = 0; i < after.length(); i++) {
+                    String afterLower = after.toLowerCase();
+                    // First check for connecting phrases that signal end of origin
+                    String[] stopPhrases = {" and ", " but ", " my name", " i'm ", " i am ",
+                        " the name", " called ", " you can call", " people call"};
+                    for (int s = 0; s < stopPhrases.length; s++) {
+                        int sIdx = afterLower.indexOf(stopPhrases[s]);
+                        if (sIdx >= 0 && sIdx < end) {
+                            end = sIdx;
+                        }
+                    }
+                    // Then check punctuation
+                    for (int i = 0; i < end; i++) {
                         char c = after.charAt(i);
                         if (c == ',' || c == '.' || c == '!' || c == '?') {
                             end = i;

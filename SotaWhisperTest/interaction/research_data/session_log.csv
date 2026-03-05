@@ -1,0 +1,10 @@
+﻿participant_id,group,session_num,condition_code,condition_label,with_reciprocity,start_time,end_time,duration_sec,total_turns,user_turns,robot_turns,user_initiated_goodbye,peak_vad_level,conversation_file,researcher_notes
+P01,G1,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 11:16:02,2026-03-05 11:16:17,15,1,0,1,no,0,P01_G1_S1_NOVICE_20260305_1116.txt,
+P01,G1,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 11:25:36,2026-03-05 11:27:30,114,6,1,5,no,2832,P01_G1_S1_NOVICE_20260305_1125.txt,
+P02,G2,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 12:30:00,2026-03-05 12:33:00,180,16,7,9,yes,4157,P02_G2_S1_NOVICE_20260305_1230.txt,Reconstructed from robot console log - GUI session not started
+P03,G1,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 14:34:45,2026-03-05 14:37:32,167,5,1,4,no,3999,P03_G1_S1_NOVICE_20260305_1434.txt,
+P03,G1,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 16:37:07,2026-03-05 16:44:25,439,8,2,6,no,3735,P03_G1_S1_NOVICE_20260305_1637.txt,
+P03,G1,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 16:44:34,2026-03-05 16:49:47,313,25,8,17,no,4793,P03_G1_S1_NOVICE_20260305_1644.txt,
+P04,G2,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 17:45:22,2026-03-05 18:01:42,980,46,21,25,no,6862,P04_G2_S1_NOVICE_20260305_1745.txt,
+P05,G1,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 19:08:59,2026-03-05 19:12:46,227,13,2,11,no,4875,P05_G1_S1_NOVICE_20260305_1908.txt,
+P06,G2,1,NOVICE,"NOVICE (First meeting, no memory, no reciprocity)",WOR,2026-03-05 19:40:08,2026-03-05 19:43:15,187,12,2,10,no,2504,P06_G2_S1_NOVICE_20260305_1940.txt,
