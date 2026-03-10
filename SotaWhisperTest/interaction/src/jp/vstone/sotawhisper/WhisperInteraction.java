@@ -37,12 +37,20 @@ import jp.vstone.camera.FaceDetectLib.FaceUser;
  *   java -jar whisperinteraction.jar <laptop_ip>
  *   java -jar whisperinteraction.jar <laptop_ip> --status-port 5051
  *   java -jar whisperinteraction.jar <laptop_ip> --no-memory --participant-id P01 --group G1 --session 1
+ *   java -jar whisperinteraction.jar <laptop_ip> --participant-id P01 --group G1 --session 2 --target-name Azul
+ *   java -jar whisperinteraction.jar <laptop_ip> --no-memory --participant-id P08 --group G2 --session 2 --target-name Rupak
  *
  * Experiment flags:
  *   --no-memory         Ignore stored profiles, always treat as new user (still saves)
  *   --participant-id    Participant ID for research logging (e.g., P01)
  *   --group             Group assignment: G1 or G2
  *   --session           Session number: 1 or 2
+ *   --target-name       Expected user name for Session 2 profile lookup
+ *
+ * Session 2 behavior:
+ *   REMEMBER (G1, no --no-memory):  Loads profile by --target-name, greets by name with memory
+ *   NO-REMEMBER (G2, --no-memory):  Loads profile by --target-name, pretends to forget name
+ *                                    but subtly references origin, asks name again
  *
  * Java 1.8, no lambda.
  */
@@ -74,9 +82,9 @@ public class WhisperInteraction {
     private static final int    LLM_TIMEOUT_MS      = 120000;
     private static final int    STATUS_PORT         = 5051;
 
-    private static final int    MAX_SILENCE_RETRIES    = 2;
+    private static final int    MAX_SILENCE_RETRIES    = 4;
     private static final int    FACE_GONE_THRESHOLD    = 3;  // consecutive no-face checks before closing
-    private static final int    LISTEN_DURATION_MS     = 15000;
+    private static final int    LISTEN_DURATION_MS     = 20000;
     private static final int    COOLDOWN_MS            = 3000;
     private static final int    FACE_POLL_MS           = 300;
     private static final int    FACE_DETECT_THRESHOLD  = 3;
@@ -126,9 +134,12 @@ public class WhisperInteraction {
 
     // Experiment flags
     private boolean noMemory     = false;  // --no-memory: skip profile lookup
+    private boolean videoCallMode = false; // --video-call: skip camera/face detection, auto-start
     private String  participantId = "";    // --participant-id
     private String  groupId       = "";    // --group (G1/G2)
     private String  sessionNum    = "";    // --session (1/2)
+    private String  targetName    = "";    // --target-name: expected user name for Session 2 lookup
+    private boolean pretendForget = false;  // Session 2 NO-REMEMBER: have context but pretend to forget name
     private volatile String baseLanguage = "en";  // "en" or "ja" — robot's response language
 
     // ----------------------------------------------------------------
@@ -154,7 +165,9 @@ public class WhisperInteraction {
             System.out.println("  --participant-id <id>   Participant ID (e.g., P01)");
             System.out.println("  --group <g1|g2>         Group assignment");
             System.out.println("  --session <1|2>         Session number");
+            System.out.println("  --target-name <name>    Expected user name for Session 2 profile lookup");
             System.out.println("  --language <en|ja>      Base response language (default: en)");
+            System.out.println("  --video-call            Skip camera/face detection, auto-start (for remote sessions)");
             System.out.println();
             System.out.println("Example:");
             System.out.println("  java -jar whisperinteraction.jar 192.168.11.32");
@@ -168,9 +181,11 @@ public class WhisperInteraction {
         String modelName   = OLLAMA_MODEL;
         int    statusPort  = STATUS_PORT;
         boolean noMemoryFlag = false;
+        boolean videoCallFlag = false;
         String pidFlag      = "";
         String groupFlag    = "";
         String sessionFlag  = "";
+        String targetNameFlag = "";
         String langFlag     = "en";
 
         for (int i = 1; i < args.length; i++) {
@@ -190,8 +205,12 @@ public class WhisperInteraction {
                 groupFlag = args[++i].toUpperCase();
             } else if ("--session".equals(args[i]) && i + 1 < args.length) {
                 sessionFlag = args[++i];
+            } else if ("--target-name".equals(args[i]) && i + 1 < args.length) {
+                targetNameFlag = args[++i];
             } else if ("--language".equals(args[i]) && i + 1 < args.length) {
                 langFlag = args[++i].toLowerCase();
+            } else if ("--video-call".equals(args[i])) {
+                videoCallFlag = true;
             }
         }
 
@@ -210,14 +229,22 @@ public class WhisperInteraction {
             System.out.println("  Group        : " + groupFlag);
             System.out.println("  Session      : " + sessionFlag);
         }
+        if (!targetNameFlag.isEmpty()) {
+            System.out.println("  Target Name  : " + targetNameFlag);
+        }
         System.out.println("  Language     : " + langFlag.toUpperCase());
+        if (videoCallFlag) {
+            System.out.println("  Video Call   : ENABLED (no camera, auto-start)");
+        }
         System.out.println();
 
         WhisperInteraction app = new WhisperInteraction();
         app.noMemory = noMemoryFlag;
+        app.videoCallMode = videoCallFlag;
         app.participantId = pidFlag;
         app.groupId = groupFlag;
         app.sessionNum = sessionFlag;
+        app.targetName = targetNameFlag;
         app.baseLanguage = langFlag;
         app.initialize(laptopIp, whisperPort, ollamaPort, modelName, statusPort);
         app.run();
@@ -268,25 +295,29 @@ public class WhisperInteraction {
         CRobotUtil.wait(900);
 
         // 2. Camera (with face search enabled for recognition)
-        camera = new CRoboCamera(CAMERA_DEVICE, motion);
-        camera.setEnableFaceSearch(true);
-        camera.setEnableAgeSexDetect(true);
-        // Log any faces already in the camera's in-memory list
-        try {
-            String[] savedUsers = camera.getAllUserNames();
-            if (savedUsers != null && savedUsers.length > 0) {
-                log("Camera has " + savedUsers.length + " registered faces in memory");
-                for (int i = 0; i < savedUsers.length; i++) {
-                    log("  - Registered face: " + savedUsers[i]);
+        if (!videoCallMode) {
+            camera = new CRoboCamera(CAMERA_DEVICE, motion);
+            camera.setEnableFaceSearch(true);
+            camera.setEnableAgeSexDetect(true);
+            // Log any faces already in the camera's in-memory list
+            try {
+                String[] savedUsers = camera.getAllUserNames();
+                if (savedUsers != null && savedUsers.length > 0) {
+                    log("Camera has " + savedUsers.length + " registered faces in memory");
+                    for (int i = 0; i < savedUsers.length; i++) {
+                        log("  - Registered face: " + savedUsers[i]);
+                    }
+                } else {
+                    log("No registered faces in camera memory (name-based recognition will be used for returning users)");
                 }
-            } else {
-                log("No registered faces in camera memory (name-based recognition will be used for returning users)");
+            } catch (Exception e) {
+                log("WARN: Could not query camera face list: " + e.getMessage());
             }
-        } catch (Exception e) {
-            log("WARN: Could not query camera face list: " + e.getMessage());
+            camera.StartFaceTraking();
+            log("Camera initialized (face search + age/sex detection enabled)");
+        } else {
+            log("Video-call mode: camera DISABLED (no face detection/tracking)");
         }
-        camera.StartFaceTraking();
-        log("Camera initialized (face search + age/sex detection enabled)");
 
         // 3. Speech manager (Whisper STT + TTS)
         speechManager = new WhisperSpeechManager(motion, laptopIp, whisperPort);
@@ -367,7 +398,11 @@ public class WhisperInteraction {
         }));
 
         log("Entering main loop. Press Ctrl+C to stop.");
-        log("State: IDLE -- waiting for face...");
+        if (videoCallMode) {
+            log("State: IDLE -- video-call mode, auto-starting...");
+        } else {
+            log("State: IDLE -- waiting for face...");
+        }
 
         while (running) {
             try {
@@ -395,7 +430,9 @@ public class WhisperInteraction {
                 currentState = STATE_IDLE;
                 resetSession();
                 // Restart face tracking after error recovery
-                try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
+                if (camera != null) {
+                    try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
+                }
             }
 
             CRobotUtil.wait(50);
@@ -410,6 +447,15 @@ public class WhisperInteraction {
 
     private void handleIdle() {
         gestureManager.setState(STATE_IDLE);
+
+        // Video-call mode: skip face detection, auto-start conversation
+        if (videoCallMode) {
+            log("Video-call mode: skipping face detection, auto-starting...");
+            CRobotUtil.wait(1000);  // Brief pause before starting
+            currentState = STATE_RECOGNIZING;
+            updateState(STATE_RECOGNIZING);
+            return;
+        }
 
         int consecutiveDetections = 0;
         while (running && STATE_IDLE.equals(currentState)) {
@@ -437,6 +483,71 @@ public class WhisperInteraction {
         log("--- RECOGNIZING ---");
         gestureManager.setState(STATE_RECOGNIZING);
         SoundEffects.play(SoundEffects.SFX_FACE_DETECTED);
+
+        // ============================================================
+        // Session 2 shortcut: load profile by target name, skip face registration
+        // ============================================================
+        if ("2".equals(sessionNum) && !targetName.isEmpty()) {
+            UserMemory.UserProfile profile = userMemory.getProfileByName(targetName);
+            if (profile != null) {
+                log("Session 2: Loaded profile for target user: " + targetName);
+                currentUser = profile;
+
+                if (!noMemory) {
+                    // REMEMBER (G1-S2): full memory — recognized returning user
+                    isNewUser = false;
+                    if (currentUser.preferredLanguage != null && !currentUser.preferredLanguage.isEmpty()) {
+                        recordDetectedLanguage(currentUser.preferredLanguage);
+                    }
+                    log("REMEMBER mode: greeting as returning friend (origin=" + currentUser.origin
+                        + ", interactions=" + currentUser.interactionCount + ")");
+                } else {
+                    // NO-REMEMBER (G2-S2): load context but pretend to forget name
+                    pretendForget = true;
+                    isNewUser = true;  // will trigger simplified registration
+                    log("NO-REMEMBER mode: pretending to forget name (origin=" + currentUser.origin + ")");
+                }
+
+                updateUserStatus();
+                currentState = STATE_GREETING;
+                updateState(STATE_GREETING);
+                return;
+            } else {
+                log("WARN: Target user '" + targetName + "' not found in profiles. Falling back to normal flow.");
+            }
+        }
+
+        // Video-call mode: no camera, create new user profile directly
+        if (videoCallMode) {
+            log("Video-call mode: skipping camera face recognition");
+            // If target name is set, try to load profile by name
+            if (!targetName.isEmpty()) {
+                UserMemory.UserProfile profile = userMemory.getProfileByName(targetName);
+                if (profile != null) {
+                    log("Video-call: loaded profile for: " + targetName);
+                    currentUser = profile;
+                    isNewUser = false;
+                    if (currentUser.preferredLanguage != null && !currentUser.preferredLanguage.isEmpty()) {
+                        recordDetectedLanguage(currentUser.preferredLanguage);
+                    }
+                    updateUserStatus();
+                    currentState = STATE_GREETING;
+                    updateState(STATE_GREETING);
+                    return;
+                }
+            }
+            // New user in video-call mode
+            currentUser = new UserMemory.UserProfile(userMemory.generateUserId(), "");
+            if (!targetName.isEmpty()) {
+                currentUser.name = targetName;
+                log("Video-call: new user with preset name: " + targetName);
+            }
+            isNewUser = true;
+            updateUserStatus();
+            currentState = STATE_GREETING;
+            updateState(STATE_GREETING);
+            return;
+        }
 
         // Get face user from camera
         FaceDetectResult faceResult = camera.getDetectResult();
@@ -547,7 +658,7 @@ public class WhisperInteraction {
      */
     private UserMemory.UserProfile tryNameBasedRecognition() {
         // Stop face tracking temporarily so gestures/speech work
-        camera.StopFaceTraking();
+        if (camera != null) { camera.StopFaceTraking(); }
 
         String askRemember = "ja".equals(baseLanguage)
             ? "こんにちは！前にお会いしたことはありますか？名前を教えてくれますか？"
@@ -559,7 +670,9 @@ public class WhisperInteraction {
             LISTEN_DURATION_MS, shouldTranslateForCurrentMode());
 
         // Restart face tracking
-        try { camera.StartFaceTraking(); } catch (Exception e) { /* ignore */ }
+        if (camera != null) {
+            try { camera.StartFaceTraking(); } catch (Exception e) { /* ignore */ }
+        }
 
         if (!result.ok) {
             log("Name-based recognition: no speech detected");
@@ -722,6 +835,7 @@ public class WhisperInteraction {
      * This updates the face database so next time camera recognition works.
      */
     private void reRegisterFaceForUser(String name) {
+        if (camera == null) return;
         try {
             FaceDetectResult faceResult = camera.getDetectResult();
             if (faceResult != null && faceResult.isDetect()) {
@@ -753,8 +867,10 @@ public class WhisperInteraction {
 
         // Stop face tracking so its continuous motion.play() calls
         // don't interrupt gesture arm/body servo interpolation.
-        camera.StopFaceTraking();
-        log("Face tracking paused for gesture animation");
+        if (camera != null) {
+            camera.StopFaceTraking();
+            log("Face tracking paused for gesture animation");
+        }
 
         gestureManager.setState(STATE_GREETING);
         conversationTurn = 0;
@@ -764,7 +880,11 @@ public class WhisperInteraction {
         statusServer.update("silenceRetries", Integer.valueOf(0));
 
         String greeting;
-        if (!isNewUser && currentUser != null && !currentUser.name.isEmpty()) {
+        if (pretendForget && currentUser != null) {
+            // NO-REMEMBER S2: reference origin/familiarity but ask for name
+            greeting = buildPretendForgetGreeting();
+            log("PRETEND-FORGET greeting: " + greeting + " (origin=" + currentUser.origin + ")");
+        } else if (!isNewUser && currentUser != null && !currentUser.name.isEmpty()) {
             // REMEMBER condition: personalized greeting with name + culture + memory
             greeting = buildRememberGreeting();
             log("REMEMBER greeting: " + greeting + " (origin=" + currentUser.origin + ")");
@@ -784,6 +904,12 @@ public class WhisperInteraction {
             currentState = STATE_REGISTERING;
             updateState(STATE_REGISTERING);
         } else {
+            // Returning user skips REGISTERING, restart face tracking here
+            // (REGISTERING restarts it at the end for new users)
+            if (camera != null) {
+                try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
+                log("Face tracking resumed after greeting (returning user)");
+            }
             currentState = STATE_LISTENING;
             updateState(STATE_LISTENING);
         }
@@ -855,6 +981,27 @@ public class WhisperInteraction {
     }
 
     /**
+     * Build NO-REMEMBER Session 2 greeting: robot seems to vaguely recognize
+     * the person (references origin) but asks for their name again.
+     */
+    private String buildPretendForgetGreeting() {
+        String origin = (currentUser != null && currentUser.origin != null) ? currentUser.origin : "";
+
+        if ("ja".equals(baseLanguage)) {
+            if (!origin.isEmpty()) {
+                return "あ、こんにちは！" + origin + "から来た人だよね？ごめん、名前なんだっけ？";
+            }
+            return "あ、こんにちは！なんか会ったことある気がする。名前なんだっけ？";
+        }
+
+        // English
+        if (!origin.isEmpty()) {
+            return "Hey! You look familiar... you're the one from " + origin + ", right? Sorry, what's your name again?";
+        }
+        return "Hey! You look familiar... I think we've met before. Sorry, what's your name again?";
+    }
+
+    /**
      * Listen for user's name, handling both English and Japanese.
      * In Japanese mode, uses the original Whisper text (not translation).
      * In English mode, uses the English translation and strips prefixes.
@@ -919,8 +1066,9 @@ public class WhisperInteraction {
             if (raw.isEmpty()) return null;
             log("Name listen (EN): " + raw);
 
-            // First, check if "my name is" appears mid-sentence and extract name from there
-            String[] enNameMarkers = {"my name is ", "name is ", "call me ", "i'm called ", "i am called "};
+            // First, check if name marker appears mid-sentence and extract name from there
+            String[] enNameMarkers = {"my name is ", "name is ", "call me ", "i'm called ", "i am called ",
+                                       "i'm ", "i am "};
             String lower = raw.toLowerCase();
             boolean foundMarker = false;
             for (int i = 0; i < enNameMarkers.length; i++) {
@@ -938,6 +1086,20 @@ public class WhisperInteraction {
                     }
                     if (cut > 0) {
                         raw = raw.substring(0, cut).trim();
+                    }
+                    // Also cut at filler words ("and", "from", etc.) that indicate end of name
+                    String[] nameWords = raw.split("\\s+");
+                    if (nameWords.length > 3) {
+                        raw = nameWords[0];
+                    } else if (nameWords.length > 1) {
+                        String secondLow = nameWords[1].toLowerCase();
+                        boolean isFiller = secondLow.equals("and") || secondLow.equals("from")
+                            || secondLow.equals("but") || secondLow.equals("do")
+                            || secondLow.equals("nice") || secondLow.equals("we")
+                            || secondLow.equals("i'm") || secondLow.equals("so");
+                        if (isFiller) {
+                            raw = nameWords[0];
+                        }
                     }
                     log("Extracted name after marker '" + enNameMarkers[i].trim() + "': " + raw);
                     foundMarker = true;
@@ -1012,6 +1174,23 @@ public class WhisperInteraction {
             }
         }
 
+        // Reject goodbye/common words as names (Whisper hallucination)
+        String rawLower = raw.toLowerCase();
+        String[] rejectNames = {"bye", "goodbye", "good bye", "bye bye", "no", "not",
+                                "hi", "hello", "hey", "ok", "okay", "yes", "yeah",
+                                "the", "a", "an", "is", "it", "we", "you", "have"};
+        for (int r = 0; r < rejectNames.length; r++) {
+            if (rawLower.equals(rejectNames[r]) || rawLower.equals(rejectNames[r] + ",")) {
+                log("Rejected name '" + raw + "' (common/goodbye word). Returning null.");
+                return null;
+            }
+        }
+        // Also reject if the name contains "bye" or "goodbye"
+        if (rawLower.contains("bye") || rawLower.contains("goodbye")) {
+            log("Rejected name '" + raw + "' (contains goodbye). Returning null.");
+            return null;
+        }
+
         log("Name extracted: " + raw);
         return raw.isEmpty() ? null : raw;
     }
@@ -1023,6 +1202,70 @@ public class WhisperInteraction {
     private void handleRegistering() {
         log("--- REGISTERING ---");
         gestureManager.setState(STATE_REGISTERING);
+
+        // ==============================================================
+        // Session 2 NO-REMEMBER (pretendForget): simplified registration
+        // Only ask name — skip face registration and origin question.
+        // The greeting already referenced their origin and asked for name.
+        // ==============================================================
+        if (pretendForget && currentUser != null) {
+            log("PRETEND-FORGET registration: listening for name only (profile loaded: " + currentUser.name + ")");
+
+            // The pretend-forget greeting already asked "what's your name again?"
+            // So just listen for the response (no need to ask again)
+            String name = listenAndExtractName(LISTEN_DURATION_MS);
+            if (name == null || name.isEmpty()) {
+                // Retry once
+                String retry = "ja".equals(baseLanguage)
+                    ? "ごめん、聞こえなかった。もう一回名前を教えて？"
+                    : "Sorry, I didn't catch that. What's your name?";
+                statusServer.update("lastSotaText", retry);
+                speechManager.speak(retry);
+                name = listenAndExtractName(LISTEN_DURATION_MS);
+            }
+            if (name == null || name.isEmpty()) {
+                // Fallback to stored name from S1 profile
+                name = currentUser.name;
+                log("Could not get name, using stored name: " + name);
+            }
+
+            currentUser.name = name;
+            statusServer.update("userName", name);
+            log("PRETEND-FORGET: User name confirmed: " + name);
+
+            // Casual acknowledgment — act like first meeting
+            String ack;
+            if ("ja".equals(baseLanguage)) {
+                ack = name + "さんね！よろしく！最近何か面白いことあった？";
+            } else {
+                if (currentUser.origin != null && !currentUser.origin.isEmpty()) {
+                    ack = name + "! Nice to meet you! So, what's life like in " + currentUser.origin + "?";
+                } else {
+                    ack = name + "! Nice to meet you! So, what have you been up to lately?";
+                }
+            }
+            statusServer.update("lastSotaText", ack);
+            speechManager.speak(ack);
+
+            // Update profile for this session
+            currentUser.recordInteraction();
+            userMemory.updateProfile(currentUser);
+            log("Profile updated: " + currentUser);
+
+            // Restart face tracking for conversation
+            if (camera != null) {
+                try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
+                log("Face tracking resumed after pretend-forget registration");
+            }
+
+            currentState = STATE_LISTENING;
+            updateState(STATE_LISTENING);
+            return;
+        }
+
+        // ==============================================================
+        // Normal registration (Session 1 or fallback)
+        // ==============================================================
 
         // Step 1: Ask for name
         String askName = "ja".equals(baseLanguage) ? "お名前は？" : "What's your name?";
@@ -1050,37 +1293,39 @@ public class WhisperInteraction {
         statusServer.update("userName", name);
 
         // Register face with camera (with persistence)
-        FaceDetectResult faceResult = camera.getDetectResult();
-        if (faceResult != null && faceResult.isDetect()) {
-            FaceUser user = camera.getUser(faceResult);
-            if (user != null) {
-                user.setName(name);
-                // Use addUserwithErrorCode for better diagnostics
-                int regCode = camera.addUserwithErrorCode(user);
-                if (regCode == 1) {
-                    log("Face registered for: " + name);
-                } else {
-                    log("WARN: Face registration failed (code=" + regCode + ") for: " + name);
-                    String errMsg = "unknown error";
-                    if (regCode == -100) errMsg = "FaceResult not found";
-                    else if (regCode == -201) errMsg = "pitch angle out of range";
-                    else if (regCode == -202) errMsg = "roll angle out of range";
-                    else if (regCode == -203) errMsg = "yaw angle out of range";
-                    else if (regCode == -300) errMsg = "face size out of range";
-                    else if (regCode == -400) errMsg = "low focus score";
-                    log("  Registration error: " + errMsg);
-                    // Retry with fresh detection
-                    CRobotUtil.wait(500);
-                    faceResult = camera.getDetectResult();
-                    if (faceResult != null && faceResult.isDetect()) {
-                        user = camera.getUser(faceResult);
-                        if (user != null && user.isNewUser()) {
-                            user.setName(name);
-                            regCode = camera.addUserwithErrorCode(user);
-                            if (regCode == 1) {
-                                log("Face registered on retry");
-                            } else {
-                                log("Face registration failed on retry (code=" + regCode + ")");
+        if (camera != null) {
+            FaceDetectResult faceResult = camera.getDetectResult();
+            if (faceResult != null && faceResult.isDetect()) {
+                FaceUser user = camera.getUser(faceResult);
+                if (user != null) {
+                    user.setName(name);
+                    // Use addUserwithErrorCode for better diagnostics
+                    int regCode = camera.addUserwithErrorCode(user);
+                    if (regCode == 1) {
+                        log("Face registered for: " + name);
+                    } else {
+                        log("WARN: Face registration failed (code=" + regCode + ") for: " + name);
+                        String errMsg = "unknown error";
+                        if (regCode == -100) errMsg = "FaceResult not found";
+                        else if (regCode == -201) errMsg = "pitch angle out of range";
+                        else if (regCode == -202) errMsg = "roll angle out of range";
+                        else if (regCode == -203) errMsg = "yaw angle out of range";
+                        else if (regCode == -300) errMsg = "face size out of range";
+                        else if (regCode == -400) errMsg = "low focus score";
+                        log("  Registration error: " + errMsg);
+                        // Retry with fresh detection
+                        CRobotUtil.wait(500);
+                        faceResult = camera.getDetectResult();
+                        if (faceResult != null && faceResult.isDetect()) {
+                            user = camera.getUser(faceResult);
+                            if (user != null && user.isNewUser()) {
+                                user.setName(name);
+                                regCode = camera.addUserwithErrorCode(user);
+                                if (regCode == 1) {
+                                    log("Face registered on retry");
+                                } else {
+                                    log("Face registration failed on retry (code=" + regCode + ")");
+                                }
                             }
                         }
                     }
@@ -1104,11 +1349,9 @@ public class WhisperInteraction {
         boolean originIsGeneric  = !preExtractedOrigin.isEmpty() && isGenericRegion(preExtractedOrigin);
 
         if (originIsSpecific) {
-            // User already told us a specific country — confirm and ask a follow-up question
+            // User already told us a specific country — use LLM for a natural, varied response
             currentUser.origin = preExtractedOrigin;
-            String greet = "ja".equals(baseLanguage)
-                ? name + "さん、よろしくね！" + preExtractedOrigin + "から来たんだ、いいね！" + preExtractedOrigin + "で好きなことは何？"
-                : "Nice to meet you, " + name + "! " + preExtractedOrigin + ", that's cool! What do you enjoy most about living there?";
+            String greet = generateOriginReaction(name, preExtractedOrigin);
             statusServer.update("lastSotaText", greet);
             speechManager.speak(greet);
             log("Origin already known (specific): " + preExtractedOrigin + ", skipping origin question");
@@ -1166,9 +1409,7 @@ public class WhisperInteraction {
                 currentUser.preferredLanguage = originResult.language;
 
                 if (!currentUser.origin.isEmpty()) {
-                    String confirm = "ja".equals(baseLanguage)
-                        ? "へえ、" + currentUser.origin + "！すごいね！" + currentUser.origin + "で好きなことは何？"
-                        : "Oh, " + currentUser.origin + "! That's wonderful! What do you enjoy most about " + currentUser.origin + "?";
+                    String confirm = generateOriginReaction(currentUser.name, currentUser.origin);
                     statusServer.update("lastSotaText", confirm);
                     speechManager.speak(confirm);
                 }
@@ -1188,8 +1429,10 @@ public class WhisperInteraction {
         log("Profile saved: " + currentUser);
 
         // Restart face tracking so face presence checks work during conversation
-        try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
-        log("Face tracking resumed after registration");
+        if (camera != null) {
+            try { camera.StartFaceTraking(); } catch (Exception ex) { /* ignore */ }
+            log("Face tracking resumed after registration");
+        }
 
         currentState = STATE_LISTENING;
         updateState(STATE_LISTENING);
@@ -1338,7 +1581,7 @@ public class WhisperInteraction {
         //   1. User says goodbye (detected in handleListening -> isGoodbye)
         //   2. Repeated silence (MAX_SILENCE_RETRIES reached in handleListening)
         // Face check is only used before conversation starts (in IDLE state).
-        if (conversationTurn <= 1) {
+        if (conversationTurn <= 1 && camera != null) {
             // First turn: user may have wandered off before conversation really started
             int noFaceCount = 0;
             for (int i = 0; i < FACE_GONE_THRESHOLD; i++) {
@@ -1410,12 +1653,14 @@ public class WhisperInteraction {
         CRobotUtil.wait(COOLDOWN_MS);
 
         // Restart face tracking for idle face detection
-        camera.StartFaceTraking();
-        log("Face tracking resumed");
+        if (camera != null) {
+            camera.StartFaceTraking();
+            log("Face tracking resumed");
+        }
 
         currentState = STATE_IDLE;
         updateState(STATE_IDLE);
-        log("State: IDLE -- waiting for face...");
+        log("State: IDLE -- waiting for next session...");
     }
 
     // ----------------------------------------------------------------
@@ -1480,9 +1725,10 @@ public class WhisperInteraction {
             if (!currentUser.origin.isEmpty()) {
                 sb.append(currentUser.name).append(" is from ").append(currentUser.origin).append(". ");
                 sb.append("Always address them by name. ");
-                sb.append("Be culturally aware of their background from ")
-                  .append(currentUser.origin)
-                  .append(" — naturally reference their culture, food, customs, or home country in conversation when relevant. ");
+                sb.append("You know they are from ").append(currentUser.origin).append(". ");
+                sb.append("Do NOT constantly bring up their country, food, or culture — treat them as an individual. ");
+                sb.append("Only reference their background if naturally relevant to what they just said. ");
+                sb.append("Focus on THEM as a person: their opinions, experiences, feelings, hobbies, daily life. ");
             }
 
             if (!noMemory) {
@@ -1547,7 +1793,10 @@ public class WhisperInteraction {
         sb.append("The user's speech is transcribed by Whisper AI which sometimes makes errors, especially with non-English speakers. ");
         sb.append("If the transcription looks garbled or nonsensical, try to infer the user's intent from context and respond naturally. Do not repeat garbled text. ");
         sb.append("Be warm, friendly, and natural. ");
-        sb.append("Show genuine interest in the user and maintain cultural awareness throughout the conversation.");
+        sb.append("Be VARIED and unpredictable — never use generic phrases like 'that's wonderful' or 'that's great'. ");
+        sb.append("Ask DIFFERENT types of questions each turn: mix hobbies, daily life, opinions, dreams, funny topics, hypotheticals. ");
+        sb.append("Do NOT repeat questions or topics from earlier in the conversation. ");
+        sb.append("Show genuine interest in the user as a unique individual.");
 
         return sb.toString();
     }
@@ -1565,6 +1814,7 @@ public class WhisperInteraction {
         lastDetectedLang = "en";
         currentUser = null;
         isNewUser = false;
+        pretendForget = false;
         conversationHistory.clear();
 
         // Reset status
@@ -1737,6 +1987,37 @@ public class WhisperInteraction {
 
         log("WARN: Could not capture JPEG from camera");
         return null;
+    }
+
+    /**
+     * Generate a natural, varied reaction to the user's origin using LLM.
+     * Falls back to a simple template if LLM fails.
+     */
+    private String generateOriginReaction(String name, String origin) {
+        String sysPrompt = buildSystemPrompt();
+        String userPrompt;
+        if ("ja".equals(baseLanguage)) {
+            userPrompt = name + "さんが" + origin + "から来たと言いました。"
+                + "自然にリアクションして、" + origin + "について具体的な質問をしてください。"
+                + "「すごいね」「いいね」のような一般的な反応は避けてください。"
+                + "1〜2文で簡潔に。";
+        } else {
+            userPrompt = name + " just told you they are from " + origin + ". "
+                + "React naturally and ask a specific, interesting question about " + origin + ". "
+                + "Do NOT use generic phrases like 'that's wonderful' or 'that's great'. "
+                + "Be specific and show genuine curiosity. 1-2 sentences max.";
+        }
+        log("Generating origin reaction via LLM for: " + origin);
+        LlamaClient.LLMResult result = llamaClient.chat(sysPrompt, userPrompt);
+        if (!result.isError() && !result.response.trim().isEmpty()) {
+            return result.response.trim();
+        }
+        // Fallback if LLM fails
+        log("LLM origin reaction failed, using fallback");
+        if ("ja".equals(baseLanguage)) {
+            return name + "さん、よろしくね！" + origin + "のこと、もっと教えて！";
+        }
+        return "Nice to meet you, " + name + "! Tell me more about life in " + origin + "!";
     }
 
     /** Map DeepFace race label to a guessed origin for greeting (language-aware). */
@@ -2050,6 +2331,16 @@ public class WhisperInteraction {
             }
         }
 
+        // Cut at first sentence boundary (period, exclamation, question mark)
+        // e.g. "Nepal. How are you doing today" -> "Nepal"
+        for (int i = 0; i < cleaned.length(); i++) {
+            char c = cleaned.charAt(i);
+            if (c == '.' || c == '!' || c == '?') {
+                cleaned = cleaned.substring(0, i).trim();
+                break;
+            }
+        }
+
         // Remove trailing punctuation
         while (cleaned.length() > 0) {
             char last = cleaned.charAt(cleaned.length() - 1);
@@ -2111,15 +2402,31 @@ public class WhisperInteraction {
     private boolean isGoodbye(String textEn) {
         if (textEn == null) return false;
         String lower = textEn.toLowerCase().trim();
-        String[] goodbyePhrases = {
-            "goodbye", "good bye", "bye bye", "bye-bye", "bye",
-            "see you", "see ya", "gotta go", "i have to go",
+
+        // Strong goodbye phrases — always trigger regardless of context
+        String[] strongGoodbye = {
+            "goodbye", "good bye", "bye bye", "bye-bye",
+            "see you later", "see you next time", "see ya later",
             "talk to you later", "catch you later",
-            "farewell", "take care"
+            "farewell", "i have to go now", "i need to go now"
         };
-        for (int i = 0; i < goodbyePhrases.length; i++) {
-            if (lower.contains(goodbyePhrases[i])) return true;
+        for (int i = 0; i < strongGoodbye.length; i++) {
+            if (lower.contains(strongGoodbye[i])) return true;
         }
+
+        // Weak goodbye phrases — only trigger if the utterance is short (<=8 words)
+        // This prevents false triggers like "Gotta go do some nice food"
+        String[] weakGoodbye = {
+            "bye", "see you", "see ya", "gotta go", "i have to go",
+            "take care", "i must go", "i should go"
+        };
+        int wordCount = lower.split("\\s+").length;
+        if (wordCount <= 8) {
+            for (int i = 0; i < weakGoodbye.length; i++) {
+                if (lower.contains(weakGoodbye[i])) return true;
+            }
+        }
+
         return false;
     }
 

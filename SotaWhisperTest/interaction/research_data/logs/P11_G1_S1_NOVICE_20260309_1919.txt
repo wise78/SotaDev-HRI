@@ -1,0 +1,40 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P11
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-09 19:19:34
+============================================================
+
+[19:19:36] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[19:19:44] Turn 2 - ROBOT
+  Response : What's your name?
+
+[19:19:57] Turn 3 - ROBOT
+  Response : Nice to meet you, Halil Munda! Where are you from?
+
+[19:20:15] Turn 4 - ROBOT
+  Response : Oh, Indonesia! That's wonderful! What do you enjoy most about Indonesia?
+
+[19:20:44] Turn 5 - USER (lang=id)
+  Original : Di Indonesia itu yang aku paling suka ya, pemandangannya, pemandangan alamnya bagus. Kalau di Jepang bagaimana?
+  English  : In Indonesia, what I like the most is that the nature view is good. How about in Japan?
+
+[19:20:46] Turn 6 - ROBOT
+  Response : That's wonderful, Halil! Nature lovers can find solace in many parts of the world. In Japan, we have a lot to offer too, especially with the cherry blossom season, which is a popular tourist spot. Have you ever tried hiking in the Japanese Alps or visiting the hot springs in the mountains?
+
+
+============================================================
+End Time    : 2026-03-09 19:23:35
+Duration    : 241s
+Total Turns : 6
+User Turns  : 1
+Robot Turns : 5
+Peak VAD    : 3680
+Goodbye     : Robot/timeout
+============================================================

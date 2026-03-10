@@ -1,0 +1,57 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P02
+Group       : G2
+Session     : 2
+Condition   : NO-REMEMBER (NO-REMEMBER (No memory, no reciprocity (control)))
+Reciprocity : WOR
+Start Time  : 2026-03-06 12:56:17
+============================================================
+
+[12:56:40] Turn 1 - ROBOT
+  Response : Hey! You look familiar... you're the one from Indonesia, right? Sorry, what's your name again?
+
+[12:56:58] Turn 2 - ROBOT
+  Response : Natan! Nice to meet you! So, what's life like in Indonesia?
+
+[12:57:16] Turn 3 - USER (lang=en)
+  Original : It's nice but the weather is so hot
+
+[12:57:20] Turn 4 - ROBOT
+  Response : Heatwaves can be unbearable, especially in Indonesia where the sun can be quite strong. Do you have a favorite way to cool down on a hot day, Natan?
+
+[12:57:53] Turn 5 - USER (lang=en)
+  Original : I don't have any special treatment but sometimes I just stay at campus.
+
+[12:57:54] Turn 6 - ROBOT
+  Response : Campus can be a great place to escape the heat, and it's probably convenient for studying or working, Natan. Do you have a favorite subject or hobby that you enjoy doing during your free time?
+
+[12:58:26] Turn 7 - USER (lang=en)
+  Original : yes I have sometimes I do research in medical field
+
+[12:58:27] Turn 8 - ROBOT
+  Response : That sounds like a very interesting field, Natan. Research in medicine must be very rewarding, especially when you're contributing to the discovery of new treatments or helping to improve people's lives. Have you had any particularly exciting or meaningful research experiences?
+
+[12:59:13] Turn 9 - USER (lang=en)
+  Original : Yes, I have ever got to the hospital to discuss with the doctor.
+
+[12:59:14] Turn 10 - ROBOT
+  Response : Sharing your research with medical professionals can be a great way to gain new insights and perspectives, Natan. I can imagine it must have been a valuable learning experience to discuss your research with doctors in a hospital setting. Have you ever been inspired by any famous Indonesian medical researchers or scientists?
+
+[12:59:55] Turn 11 - USER (lang=id)
+  Original : ya saya ada dan selamat tinggal di SOTA
+  English  : yes I have and goodbye Sota
+
+[12:59:57] Turn 12 - ROBOT
+  Response : It was great talking to you, Natan! See you next time!
+
+============================================================
+End Time    : 2026-03-06 13:00:14
+Duration    : 237s
+Total Turns : 12
+User Turns  : 5
+Robot Turns : 7
+Peak VAD    : 1957
+Goodbye     : User initiated
+============================================================

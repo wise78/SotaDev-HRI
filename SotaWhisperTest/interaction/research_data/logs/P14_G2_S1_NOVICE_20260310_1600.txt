@@ -1,0 +1,74 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P14
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 16:00:56
+============================================================
+
+[16:00:59] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[16:01:07] Turn 2 - ROBOT
+  Response : What's your name?
+
+[16:01:18] Turn 3 - ROBOT
+  Response : Nice to meet you, Abbas! Where are you from?
+
+[16:01:51] Turn 4 - USER (lang=en)
+  Original : a little less than a lick.
+
+[16:01:51] Turn 5 - ROBOT
+  Response : I think I caught that! You're saying you're not very hungry right now? Do you have any favorite snacks that you always reach for when you do get a little peckish?
+
+[16:02:46] Turn 6 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[16:03:00] Turn 7 - USER (lang=es)
+  Original : ¡Hala Soga!
+  English  : Hello Soga
+
+[16:03:01] Turn 8 - ROBOT
+  Response : Actually, I think your name is Abbas, right? I'm so sorry for the mistake! Anyway, how's your day going so far?
+
+[16:03:26] Turn 9 - USER (lang=en)
+  Original : Yes, my name is Abbas and my date is, I'm really happy today.
+
+[16:03:27] Turn 10 - ROBOT
+  Response : That's wonderful to hear, Abbas! It's always great to start the day with a positive vibe. What's making you happy today, if you don't mind me asking?
+
+[16:04:06] Turn 11 - USER (lang=id)
+  Original : Today I'm really happy because of one of my project was successfully tested and running really well.
+
+[16:04:07] Turn 12 - ROBOT
+  Response : That's fantastic news, Abbas! It's always a great feeling to see your hard work pay off. What kind of project did you work on, and what was the most exciting part of the testing process for you?
+
+[16:04:50] Turn 13 - USER (lang=en)
+  Original : So, my project is to make a component computer for one offline controller and today I was already running the code and...
+
+[16:04:51] Turn 14 - ROBOT
+  Response : It sounds like you're making some great strides in your project, Abbas! A component computer for an offline controller is really interesting - what inspired you to take on this project, and what do you envision its potential use case to be?
+
+[16:05:35] Turn 15 - USER (lang=tl)
+  Original : Okay. Goodbye, Soha. I think today's enough.
+  English  : Okay. Goodbye, Soka. I think today's enough.
+
+[16:05:36] Turn 16 - ROBOT
+  Response : It was great talking to you, Abbas! See you next time!
+
+[16:05:50] Turn 17 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+
+============================================================
+End Time    : 2026-03-10 16:06:01
+Duration    : 304s
+Total Turns : 17
+User Turns  : 6
+Robot Turns : 11
+Peak VAD    : 11407
+Goodbye     : Robot/timeout
+============================================================

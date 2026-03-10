@@ -1,0 +1,33 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P12
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 15:26:23
+============================================================
+
+[15:26:25] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[15:26:33] Turn 2 - ROBOT
+  Response : What's your name?
+
+[15:26:44] Turn 3 - ROBOT
+  Response : Sorry, I couldn't hear that. Could you tell me your name again?
+
+[15:27:11] Turn 4 - ROBOT
+  Response : Nice to meet you, Friend! Where are you from?
+
+
+============================================================
+End Time    : 2026-03-10 15:27:54
+Duration    : 91s
+Total Turns : 4
+User Turns  : 0
+Robot Turns : 4
+Peak VAD    : 7798
+Goodbye     : Robot/timeout
+============================================================

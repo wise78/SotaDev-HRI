@@ -1,0 +1,33 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P14
+Group       : G2
+Session     : 2
+Condition   : NO-REMEMBER (NO-REMEMBER (No memory, no reciprocity (control)))
+Reciprocity : WOR
+Start Time  : 2026-03-10 19:12:55
+============================================================
+
+[19:12:58] Turn 1 - ROBOT
+  Response : Hey! You look familiar... you're the one from Indonesia, right? Sorry, what's your name again?
+
+[19:13:29] Turn 2 - ROBOT
+  Response : Sorry, I didn't catch that. What's your name?
+
+[19:13:41] Turn 3 - ROBOT
+  Response : Abbas! Nice to meet you! So, what's life like in Indonesia?
+
+[19:14:09] Turn 4 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+
+============================================================
+End Time    : 2026-03-10 19:15:30
+Duration    : 155s
+Total Turns : 4
+User Turns  : 0
+Robot Turns : 4
+Peak VAD    : 16503
+Goodbye     : Robot/timeout
+============================================================

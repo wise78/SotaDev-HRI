@@ -1,0 +1,56 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P06
+Group       : G2
+Session     : 2
+Condition   : NO-REMEMBER (NO-REMEMBER (No memory, no reciprocity (control)))
+Reciprocity : WOR
+Start Time  : 2026-03-06 14:03:18
+============================================================
+
+[14:03:26] Turn 1 - ROBOT
+  Response : Hey! You look familiar... you're the one from Caribbean Island, right? Sorry, what's your name again?
+
+[14:03:45] Turn 2 - ROBOT
+  Response : Jessica! Nice to meet you! So, what's life like in Caribbean Island?
+
+[14:04:11] Turn 3 - USER (lang=en)
+  Original : The life in the Caribbean island is very nice. Going to the beach, sleeping, going to the sea.
+
+[14:04:15] Turn 4 - ROBOT
+  Response : It sounds like you enjoy relaxing and spending time by the ocean, which is a big part of the Caribbean culture. Do you have a favorite beach or island that you like to visit?
+
+[14:04:44] Turn 5 - USER (lang=en)
+  Original : My favorite beach is Boca Quica.
+
+[14:04:45] Turn 6 - ROBOT
+  Response : I think you might mean Boca Chica, which is a beautiful beach in the Turks and Caicos Islands? Does that sound right to you, or is it actually Boca Quica?
+
+[14:05:22] Turn 7 - USER (lang=en)
+  Original : as Boca Chica is the capital of the Dominican Republic.
+
+[14:05:24] Turn 8 - ROBOT
+  Response : I think there's been a mix-up, Jessica. Boca Chica is actually a beach in the Turks and Caicos Islands, but I don't think it's the capital of the Dominican Republic, which is Santo Domingo. Did I get it wrong, or was there another mistake I made?
+
+[14:06:13] Turn 9 - USER (lang=en)
+  Original : Yes, Santo Domingo is the capital of the Dominican Republic. I said before Boca Chica is in the capital of the Dominican Republic.
+
+[14:06:15] Turn 10 - ROBOT
+  Response : So you're saying that Boca Chica is actually a beach in the capital of the Dominican Republic, Santo Domingo? I'm glad we cleared that up. What do you like to do when you're visiting Boca Chica beach?
+
+[14:06:57] Turn 11 - USER (lang=en)
+  Original : Goodbye!
+
+[14:06:58] Turn 12 - ROBOT
+  Response : It was great talking to you, Jessica! See you next time!
+
+============================================================
+End Time    : 2026-03-06 14:07:13
+Duration    : 235s
+Total Turns : 12
+User Turns  : 5
+Robot Turns : 7
+Peak VAD    : 1856
+Goodbye     : User initiated
+============================================================

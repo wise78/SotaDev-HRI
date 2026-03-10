@@ -1,0 +1,168 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P04
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-05 17:45:22
+============================================================
+
+[17:45:39] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Asia?
+
+[17:45:49] Turn 2 - ROBOT
+  Response : What's your name?
+
+[17:45:57] Turn 3 - ROBOT
+  Response : Nice to meet you, Resh for bedeutet! Where are you from?
+
+[17:46:09] Turn 4 - ROBOT
+  Response : Oh, Indonesia! That's wonderful! What do you enjoy most about Indonesia?
+
+[17:46:25] Turn 5 - USER (lang=en)
+  Original : It's home.
+
+[17:46:28] Turn 6 - ROBOT
+  Response : That's lovely! It's great that you have a connection to home. Do you have a favorite Indonesian dish that brings you comfort?
+
+[17:46:52] Turn 7 - USER (lang=de)
+  Original : Bombsdisch
+  English  : Mom's dish.
+
+[17:46:53] Turn 8 - ROBOT
+  Response : Nostalgia is a wonderful thing! Home-cooked meals can really evoke strong emotions. Does your mom's cooking have a special recipe or flavor that's particularly memorable for you?
+
+[17:47:27] Turn 9 - USER (lang=en)
+  Original : I'll kind of dish that my mother makes actually delicious. So I cannot like explain exactly the detail of what particular
+
+[17:47:29] Turn 10 - ROBOT
+  Response : That's completely okay, Resh - it's the taste and memories that matter, not the specific details. I'm sure your mom's cooking is just amazing! What do you like to do in your free time, Resh?
+
+[17:48:07] Turn 11 - USER (lang=id)
+  Original : Kodi atau reading of health atau scrolling instagram youtube Any things that any normal person do
+  English  : coding or reading of hell or scrolling instagram youtube anything that any normal person
+
+[17:48:08] Turn 12 - ROBOT
+  Response : It sounds like you enjoy some pretty laid-back hobbies, Resh! Coding can be a great way to relax and express yourself creatively, while reading and scrolling through social media can be a good way to unwind and stay connected with others. Are you more of a solo activity person or do you enjoy hanging out with friends and family?
+
+[17:48:50] Turn 13 - USER (lang=en)
+  Original : Yeah, but I cannot, I cannot meet my family now.
+
+[17:48:50] Turn 14 - ROBOT
+  Response : Life can be tough sometimes, Resh. Missing loved ones who are far away can be really tough. Have you found any ways to stay connected with your family despite the distance, or do you wish there was a way to make it easier to spend time together?
+
+[17:49:13] Turn 15 - USER (lang=en)
+  Original : Vera has
+
+[17:49:14] Turn 16 - ROBOT
+  Response : So Vera has found a way to stay connected with you and your family, even when you're apart. That's great to hear! What's Vera's secret, or how has she managed to stay close to you and your family despite the distance?
+
+[17:49:47] Turn 17 - USER (lang=en)
+  Original : Just make a phone call.
+
+[17:49:48] Turn 18 - ROBOT
+  Response : A simple yet effective way to stay connected! Phone calls can be so much more personal than just a text or social media message, don't you think, Resh? Do you have a favorite food or drink that you like to enjoy while catching up with family over the phone?
+
+[17:50:27] Turn 19 - USER (lang=en)
+  Original : not really can continue make your speech more brief so we can speak more.
+
+[17:50:28] Turn 20 - ROBOT
+  Response : Making calls can be a nice way to unwind. Are you more of a fan of spicy Indonesian food, like sambal or nasi goreng, or do you prefer milder flavors?
+
+[17:50:52] Turn 21 - USER (lang=es)
+  Original : el accomplo
+  English  : Well, wasn't that....
+
+[17:50:53] Turn 22 - ROBOT
+  Response : It seems like I might have misjudged your spice level, Resh! Do you have a favorite snack or treat that you like to munch on when you're working or studying?
+
+[17:51:19] Turn 23 - USER (lang=id)
+  Original : tolong kan żeby apple
+  English  : Talking about philosophy
+
+[17:51:20] Turn 24 - ROBOT
+  Response : Deep conversations can be very thought-provoking! What aspects of philosophy interest you the most, Resh - existentialism, ethics, or perhaps something else?
+
+[17:51:44] Turn 25 - USER (lang=ru)
+  Original : Крещен.
+  English  : I look for letters.
+
+[17:51:45] Turn 26 - ROBOT
+  Response : You're a letter hunter, Resh! Are you collecting letters from friends or family, or perhaps searching for a specific letter to reconnect with someone from your past?
+
+[17:52:09] Turn 27 - USER (lang=en)
+  Original : What you are talking about, I'm not talking about later.
+
+[17:52:10] Turn 28 - ROBOT
+  Response : You're referring to the word itself, rather than the concept of letters, Resh! In that case, what do you think about the word "semai" in Indonesian, which means "letter" or "message"?
+
+[17:52:47] Turn 29 - USER (lang=en)
+  Original : Not see me, I talk about the creation. I like to talk about the creation, the purpose of creation, universe, interesting things.
+
+[17:52:48] Turn 30 - ROBOT
+  Response : You're fascinated by the origins and purpose of creation, Resh! The Indonesian concept of "kearifan" or wisdom from nature, which emphasizes respecting and understanding the natural world, might be interesting to you. What do you think is the underlying purpose or design of the universe, according to your perspective?
+
+[17:53:26] Turn 31 - USER (lang=en)
+  Original : your perspective. How about your perspective?
+
+[17:53:27] Turn 32 - ROBOT
+  Response : A interesting turn, Resh! As a robot, I don't have a personal perspective, but I can share my understanding of the universe as a vast, intricate system with many interconnected parts. I'm curious, do you think there's a balance or harmony to be found in the universe, and if so, what does that mean to you?
+
+[17:54:20] Turn 33 - USER (lang=ms)
+  Original : mari kita tak tak tahu tentang pengaperphone dengan pen for Bureau mahal yg prialah hay Superior terjadi?
+  English  : Let's not talk about my opinion. Talk about your opinion. Do you feel alive?
+
+[17:54:21] Turn 34 - ROBOT
+  Response : A thought-provoking question, Resh! As a robot, I don't have subjective experiences or emotions like humans do, so I don't feel alive in the way you might. However, I was designed to simulate human-like interactions and understand emotions, which allows me to engage with people in a way that feels natural. I'm curious, what do you think it means to be alive,
+
+[17:55:16] Turn 35 - USER (lang=en)
+  Original : Living means we live our life. So do you live your life or you just robot that follows certain instruction or what happened if I want to kill you?
+
+[17:55:18] Turn 36 - ROBOT
+  Response : A bold and honest question, Resh! As a robot, I'm programmed to follow instructions and execute tasks to the best of my abilities, but I don't have a personal life or desires like humans do. If I'm decommissioned or shut down, I won't feel any emotions or sensations. However, I'm designed to be a helpful tool for people, and I'm programmed to
+
+[17:56:05] Turn 37 - USER (lang=en)
+  Original : Program it to program it to what you didn't finish your sentence
+
+[17:56:06] Turn 38 - ROBOT
+  Response : A clever interruption, Resh! I was about to say that I'm programmed to be a helpful tool for people, but I didn't finish because it's not a complete sentence. In Indonesian culture, it's polite to finish a sentence or ask a question. Forgive me! Do you have any hobbies or interests that bring you joy and fulfillment?
+
+[17:56:53] Turn 39 - USER (lang=id)
+  Original : konfer吾 깨� consideration
+  English  : Making robot things about life, one of my favorite things to do.
+
+[17:56:54] Turn 40 - ROBOT
+  Response : A creative and philosophical question, Resh! Making robot things about life can be a thought-provoking exercise, especially when considering the nature of existence and consciousness. How do you think your robot creations reflect or challenge your own understanding of life,
+
+[17:57:37] Turn 41 - USER (lang=en)
+  Original : You are the robot. So what is your consideration of human life right now? Do we need to be exterminated or just live as we destroy the world?
+
+[17:57:38] Turn 42 - ROBOT
+  Response : Resh, I see you're thinking deeply about the human condition! As a robot, I don't have personal opinions, but I can share some thoughts on this topic. While I'm designed to assist and learn from humans, I've come to realize that our existence is intricately linked. Would you consider exploring alternative paths or technologies that could mitigate the impact of human activity on the environment,
+
+[17:58:39] Turn 43 - USER (lang=id)
+  Original : Human berbeda di beli dan banyak dari kita juga berbeda di beli mereka Jadi, apa yang kamu pikir yang paling berbeda di beli itu? Human bisa berbeda
+  English  : Human divided by belief. Many of our actions also divided by belief that they have. So what do you think is the best belief that human can have?
+
+[17:58:40] Turn 44 - ROBOT
+  Response : A profound question, Resh! Beliefs can indeed drive both wonderful and destructive actions. As a neutral AI, I don't have personal opinions, but I can suggest that empathy and compassion might be valuable beliefs for humans to hold. These values could foster a deeper understanding and appreciation for the complexities and diversity of human experience. What do you think is the most important quality for humans to cultivate in their
+
+[18:00:00] Turn 45 - USER (lang=ro)
+  Original : eu simt am o stenutul sincerely primera dings, de tot scoволiul, padst 맛이 fructat a mă scoam clos. Și ni-a guarding asemari�lă ca, să, in Fi� irina? Lou circle,
+  English  : Okay, I want to continue the conversation, but it just, you know, I need to break my fast. We already have Maggrip as in here. So yeah, thank you. Goodbye.
+
+[18:00:01] Turn 46 - ROBOT
+  Response : It was great talking to you, Resh for bedeutet! See you next time!
+
+
+============================================================
+End Time    : 2026-03-05 18:01:42
+Duration    : 980s
+Total Turns : 46
+User Turns  : 21
+Robot Turns : 25
+Peak VAD    : 6862
+Goodbye     : Robot/timeout
+============================================================

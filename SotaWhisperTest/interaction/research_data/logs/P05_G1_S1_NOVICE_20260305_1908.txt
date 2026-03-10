@@ -1,0 +1,38 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P05
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-05 19:08:59
+============================================================
+
+[19:09:18] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Europe or America?
+
+[19:09:29] Turn 2 - ROBOT
+  Response : What's your name?
+
+[19:09:38] Turn 3 - ROBOT
+  Response : Nice to meet you, Sherwood from Philippines! Where are you from?
+
+[19:10:18] Turn 4 - USER (lang=en)
+  Original : Okay, that's it. So let's analyze my蔗 dozen Yeah
+
+[19:10:21] Turn 5 - ROBOT
+  Response : It seems like you might be saying "one dozen" - are you trying to talk about a recent purchase or perhaps a favorite food?
+
+[19:10:38] Turn 6 - ROBOT
+  Response : It was great talking to you, Sherwood from Philippines! See you next time!
+
+============================================================
+End Time    : 2026-03-05 19:10:38
+Duration    : 99s
+Total Turns : 6
+User Turns  : 1
+Robot Turns : 5
+Peak VAD    : 4875
+Goodbye     : Robot/timeout
+============================================================

@@ -1,0 +1,27 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P15
+Group       : G1
+Session     : 2
+Condition   : REMEMBER (REMEMBER (Memory active, with reciprocity))
+Reciprocity : WR
+Start Time  : 2026-03-10 17:13:31
+============================================================
+
+[17:13:33] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[17:13:40] Turn 2 - ROBOT
+  Response : What's your name?
+
+
+============================================================
+End Time    : 2026-03-10 17:17:10
+Duration    : 219s
+Total Turns : 2
+User Turns  : 0
+Robot Turns : 2
+Peak VAD    : 3089
+Goodbye     : Robot/timeout
+============================================================

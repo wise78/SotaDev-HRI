@@ -1,0 +1,51 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P08
+Group       : G2
+Session     : 2
+Condition   : NO-REMEMBER (NO-REMEMBER (No memory, no reciprocity (control)))
+Reciprocity : WOR
+Start Time  : 2026-03-06 20:44:52
+============================================================
+
+[20:45:08] Turn 1 - ROBOT
+  Response : Hey! You look familiar... you're the one from Nepal, right? Sorry, what's your name again?
+
+[20:45:27] Turn 2 - ROBOT
+  Response : Rupak! Nice to meet you! So, what's life like in Nepal?
+
+[20:45:43] Turn 3 - USER (lang=en)
+  Original : My name pronouns like Rupak
+
+[20:45:47] Turn 4 - ROBOT
+  Response : I'll make sure to use the correct pronouns from now on, Rupak. So, what do you like to do in your free time, Rupak?
+
+[20:46:03] Turn 5 - ROBOT
+  Response : It was great talking to you, Rupak! See you next time!
+
+[20:46:38] Turn 6 - ROBOT
+  Response : Hey! You look familiar... you're the one from Nepal, right? Sorry, what's your name again?
+
+[20:46:55] Turn 7 - ROBOT
+  Response : Rupak! Nice to meet you! So, what's life like in Nepal?
+
+[20:47:15] Turn 8 - USER (lang=en)
+  Original : The life is in Nepal in Nepal is fun. So could you please tell me how you feeling today?
+
+[20:47:17] Turn 9 - ROBOT
+  Response : I can imagine that life in Nepal can be quite vibrant and fun, Rupak! As for me, I'm just a robot, I don't feel emotions like humans do, but I'm functioning properly and ready to chat with you, feeling energetic and ready to learn about your day! How's your day going so far, have you tried any delicious Nepali dishes recently?
+
+[20:47:56] Turn 10 - ROBOT
+  Response : It was great talking to you, Rupak! See you next time!
+
+
+============================================================
+End Time    : 2026-03-06 20:52:39
+Duration    : 466s
+Total Turns : 10
+User Turns  : 2
+Robot Turns : 8
+Peak VAD    : 3212
+Goodbye     : Robot/timeout
+============================================================

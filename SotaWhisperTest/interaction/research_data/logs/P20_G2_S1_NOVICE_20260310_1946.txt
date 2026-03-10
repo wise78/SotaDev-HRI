@@ -1,0 +1,67 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P20
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 19:46:17
+============================================================
+
+[19:46:21] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[19:46:29] Turn 2 - ROBOT
+  Response : What's your name?
+
+[19:47:00] Turn 3 - ROBOT
+  Response : Nice to meet you, Dennis! Where are you from?
+
+[19:47:30] Turn 4 - ROBOT
+  Response : I've always been fascinated by the unique blend of traditional and modern architecture in Indonesian cities, like the blend of ancient temples and modern skyscrapers in Jakarta. Have you ever visited any of these iconic sites, and what was your impression of experiencing this juxtaposition of old and new?
+
+[19:48:28] Turn 5 - USER (lang=en)
+  Original : Come on, Erlor. Come on, Erlor. Come on!
+
+[19:48:29] Turn 6 - ROBOT
+  Response : I see you're excited, Erlor! What's got you so pumped up today?
+
+[19:49:01] Turn 7 - USER (lang=id)
+  Original : ha? halusinasi dia halo halo nama busi apa
+  English  : What? He's hallucinating. What are you talking about? Hello, hello. What's your name?
+
+[19:49:02] Turn 8 - ROBOT
+  Response : I think we may have had a brief glitch there, Dennis. My name is Sota, nice to meet you, Dennis. So, what brings a big smile to your face today?
+
+[19:49:47] Turn 9 - USER (lang=pt)
+  Original : Ele pegou a bicho e nem morava.
+  English  : He took the beast and me, let's live.
+
+[19:49:47] Turn 10 - ROBOT
+  Response : It sounds like you're referencing a favorite movie or show, Dennis. Are you a fan of action-packed adventures with lovable companions?
+
+[19:50:11] Turn 11 - USER (lang=de)
+  Original : Ja, ich liebe Filmexen!
+  English  : Yes, I'm looking for action!
+
+[19:50:12] Turn 12 - ROBOT
+  Response : Action-packed adventures can be thrilling! Do you have a favorite type of action movie, like superhero films or high-octane thrillers, that gets your adrenaline pumping?
+
+[19:50:50] Turn 13 - USER (lang=tl)
+  Original : Apo na li? Ngomong ayo dah. Halo, ako kamusyukan ng nanapah.
+  English  : What are you talking about? Hello, what do you like to watch?
+
+[19:50:51] Turn 14 - ROBOT
+  Response : I think I might have jumped into the conversation a bit too fast. I was just trying to relate to something that sparked your enthusiasm, Dennis. As for me, I enjoy watching documentaries on artificial intelligence and space exploration. It's fascinating to learn about the latest developments in these fields. Have you ever been curious about how robots like me are designed and built?
+
+
+============================================================
+End Time    : 2026-03-10 19:57:13
+Duration    : 656s
+Total Turns : 14
+User Turns  : 5
+Robot Turns : 9
+Peak VAD    : 15915
+Goodbye     : Robot/timeout
+============================================================

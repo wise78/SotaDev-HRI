@@ -1,0 +1,80 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P02
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE + WOR)
+Reciprocity : WOR
+Start Time  : 2026-03-05 12:30:00 (approximate)
+============================================================
+NOTE: This log was reconstructed from robot SSH console output.
+      GUI "Start Session" was not pressed during this session.
+      Timestamps are approximate.
+============================================================
+
+[12:30:05] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Asia?
+
+[12:30:10] Turn 2 - ROBOT
+  Response : What's your name?
+
+[12:30:20] Turn 3 - USER (lang=en)
+  Original : Yes, I'm from Asia, I'm from Indonesia and my name is Nhatad.
+
+[12:30:25] Turn 4 - ROBOT
+  Response : Nice to meet you, Nhatad! Indonesia, that's cool! What do you enjoy most about living there?
+
+[12:30:38] Turn 5 - USER (lang=en)
+  Original : Yes, I'm not you anymore.
+  Note     : Whisper transcription likely garbled
+
+[12:30:45] Turn 6 - ROBOT
+  Response : I think I misunderstood, Nhatad. You're starting fresh with a new conversation. That's totally okay! What's been the highlight of your week, Nhatad?
+
+[12:31:05] Turn 7 - USER (lang=en)
+  Original : this week I'm doing my research in Japan
+
+[12:31:10] Turn 8 - ROBOT
+  Response : Research in Japan sounds like a fascinating experience, Nhatad. Are you studying any specific subjects or fields while you're here?
+
+[12:31:28] Turn 9 - USER (lang=en)
+  Original : I'm in medical field in human, I remember it today.
+
+[12:31:35] Turn 10 - ROBOT
+  Response : That's a noble field, Nhatad. I'm sure your research is contributing to the advancement of medical knowledge. Are there any specific aspects of human medicine that you're particularly interested in or exploring during your time here?
+
+[12:31:55] Turn 11 - USER (lang=tl)
+  Original : Sheerong album langag ito您yo hindibak study ay ang isa na k Blind
+  English  : Sorry I am exploring in Tuberclaw, крутance area and let's see
+  Note     : Whisper transcription heavily garbled (detected as Tagalog)
+
+[12:32:05] Turn 12 - ROBOT
+  Response : I think there might be a slight translation issue, Nhatad. It sounds like you're referring to "tuberculosis", but I'm not entirely sure what you mean by "tuberclaw" and "крутance area". Could you please clarify or rephrase that for me?
+
+[12:32:22] Turn 13 - USER (lang=en)
+  Original : Yes, it's true, it's revering and to be repulsive and good-may, sadhaha.
+  Note     : Whisper transcription likely garbled
+
+[12:32:30] Turn 14 - ROBOT
+  Response : It sounds like you're having a bit of fun with words, Nhatad! I'm not entirely sure what you're getting at, but I think I can guess - you're probably referring to tuberculosis being a serious health issue, but also acknowledging the word's sound is a bit silly. Are you using humor to cope with the challenges of medical research?
+
+[12:32:50] Turn 15 - USER (lang=en)
+  Original : Good bye,ですね
+
+[12:32:55] Turn 16 - ROBOT
+  Response : It was great talking to you, Nhatad! See you next time!
+
+============================================================
+End Time    : 2026-03-05 12:33:00 (approximate)
+Duration    : 180s
+Total Turns : 16
+User Turns  : 7
+Robot Turns : 9
+Peak VAD    : 4157
+Goodbye     : User initiated
+Notes       : Reconstructed from robot console log. GUI session not started.
+              DeepFace: asian 90%. Name detected as "Nhatad" (likely Whisper
+              misheard actual name). Origin correctly extracted: Indonesia.
+              Memory summary: Medical research on tuberculosis in Japan.
+============================================================

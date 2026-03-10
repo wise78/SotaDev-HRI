@@ -1,0 +1,152 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P05
+Group       : G1
+Session     : 2
+Condition   : REMEMBER (REMEMBER (Memory active, with reciprocity))
+Reciprocity : WR
+Start Time  : 2026-03-06 20:15:17
+============================================================
+
+[20:15:48] Turn 1 - ROBOT
+  Response : Hello Sherwin, my friend from Philippines! I remember you! Welcome back! Last time we talked about some interesting things! How are you?
+
+[20:16:17] Turn 2 - USER (lang=tl)
+  Original : I'm working for my presentation tomorrow.
+  English  : It's speedrunning for... I am working for my presentation tomorrow.
+
+[20:16:20] Turn 3 - ROBOT
+  Response : Speedrunning sounds like a thrilling topic, Sherwin. I'm glad to hear you're preparing for your presentation. What's the game you're focusing on, and what's the main goal of your presentation?
+
+[20:16:55] Turn 4 - USER (lang=tl)
+  Original : At presentation tomorow is for the project that I did in this internship.
+  English  : The presentation tomorrow is for the project that I did in this internship.
+
+[20:16:57] Turn 5 - ROBOT
+  Response : You're sharing your internship project with your colleagues, I see. How's the project going, and what did you learn from this experience that you're excited to present to them?
+
+[20:17:39] Turn 6 - USER (lang=tl)
+  Original : Actually, the presentation is still not yet ready. I'm still working on it until today. Until midnight.
+  English  : Actually the presentation is still not yet ready. I'm still working on it until today. Until midnight.
+
+[20:17:40] Turn 7 - ROBOT
+  Response : You're putting in some late hours to get everything just right, Sherwin. I can imagine it's a bit stressful, but I'm sure it'll be worth it to showcase your hard work. How's the feedback from your team and supervisor been so far?
+
+[20:18:23] Turn 8 - USER (lang=tl)
+  Original : For feedback, I will know tomorrow on the, during the presentation.
+  English  : for feedback I will know tomorrow on the during the presentation
+
+[20:18:25] Turn 9 - ROBOT
+  Response : That's a great attitude to have, Sherwin. Having a clear idea of what's working and what needs improvement will help you tailor your presentation. Are you feeling nervous about how your team will react to your project, or are you more focused on sharing your progress?
+
+[20:19:06] Turn 10 - USER (lang=ms)
+  Original : Sebelumnya, saya terbincang lebih banyak untuk berkongsi yang saya lakukan dan yang saya lakukan.
+  English  : Tomorrow I'm mostly focused on sharing just what I did and what I completed.
+
+[20:19:08] Turn 11 - ROBOT
+  Response : So, it sounds like you're keeping it simple and straightforward, Sherwin. Sometimes, that's the best way to let your work speak for itself. Have you given any thought to what you'd like to work on next, or is there a particular area you're interested in exploring further?
+
+[20:19:45] Turn 12 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[20:20:00] Turn 13 - USER (lang=tl)
+  Original : What are you doing right now?
+
+[20:20:02] Turn 14 - ROBOT
+  Response : I'm just catching up on our previous conversations, Sherwin. I've been thinking a lot about your interests in exploring ways to measure understanding through verbalization. How do you think I can improve our conversation to better gauge your thoughts and ideas?
+
+[20:20:34] Turn 15 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[20:21:05] Turn 16 - USER (lang=tl)
+  Original : Wait, I forgot what... I forgot what... What are you currently thinking about right now? The text here disappeared.
+  English  : I forgot what I was thinking about right now. The text here disappeared.
+
+[20:21:07] Turn 17 - ROBOT
+  Response : It can be frustrating when that happens, Sherwin. Let's start fresh. I remember that you've mentioned enjoying activities like playing games or watching TV when you're at home. Are there any new hobbies or interests you've discovered since our last conversation that you're excited about?
+
+[20:21:57] Turn 18 - USER (lang=tl)
+  Original : I am excited for the weekend because after the presentation, I am already free.
+  English  : I am excited for the weekend because after the presentation I am already free.
+
+[20:21:59] Turn 19 - ROBOT
+  Response : It sounds like you have some looking forward to, Sherwin! Are you planning on spending the weekend relaxing, or do you have any fun activities or outings planned to celebrate the end of a busy week?
+
+[20:22:31] Turn 20 - USER (lang=en)
+  Original : Do you know any interesting places to go in Nara?
+
+[20:22:32] Turn 21 - ROBOT
+  Response : Nara is a beautiful city! While I'm a robot and don't have personal experiences, I can suggest some popular spots like Todai-ji Temple, Kasuga-taisha Shrine, and Nara Park, where you can see friendly deer roaming around. Have you visited Nara before, or is this something on your bucket list, Sherwin?
+
+[20:23:17] Turn 22 - USER (lang=tl)
+  Original : I have already visited Nara and fed the deer some cookies.
+
+[20:23:19] Turn 23 - ROBOT
+  Response : I'm sure the deer appreciated the cookies, Sherwin! It's great that you have fond memories of your visit. Now, I'd love to catch up on your thoughts about our previous conversation on measuring understanding through verbalization. Do you think we've made any progress or should we explore new approaches to better understand human thought processes?
+
+[20:24:05] Turn 24 - USER (lang=tl)
+  Original : What do you mean by understanding human thought processes?
+
+[20:24:07] Turn 25 - ROBOT
+  Response : By understanding human thought processes, Sherwin, I mean trying to grasp how you think, process information, and express yourself, especially through verbalization. I'm curious to know if our previous experiment was able to capture the nuances of human thought accurately. Can you tell me more about what went through your mind when I asked you to describe your favorite hobby, and how I could improve my understanding of your
+
+[20:25:12] Turn 26 - USER (lang=tl)
+  Original : I thought it is fun that you are asking about my hobbies and getting to know more.
+  English  : I thought it is fun that you are or interesting that you are asking about my hobbies and getting to know more.
+
+[20:25:13] Turn 27 - ROBOT
+  Response : That's exactly what I'm trying to do, Sherwin - get to know you better and understand what makes you tick. I want to have conversations that are engaging and meaningful, not just a series of questions. Speaking of hobbies, I've been thinking about your love for staying at home. What do you think is the most comforting or relaxing thing about spending time at home for you?
+
+[20:26:17] Turn 28 - USER (lang=tl)
+  Original : Actually, in my internship, I spend more time outside in the lab than in the dorm. And I spend more time going outside.
+  English  : Actually in my internship I spend more time outside in the lab than in the dorm. And I spend more time going outside.
+
+[20:26:19] Turn 29 - ROBOT
+  Response : It seems like my initial impression of you being a homebody was a bit off, Sherwin! I'm glad to hear that you're actually spending more time outside and enjoying the fresh air and new experiences. That's really admirable, especially considering you're in an internship setting. How do you think the outdoors has influenced your work or perspective on life?
+
+[20:27:10] Turn 30 - USER (lang=tl)
+  Original : I think we mostly go outside to take a break.
+
+[20:27:12] Turn 31 - ROBOT
+  Response : Taking breaks outside can be really refreshing and help you clear your mind, Sherwin. It's great that your team is prioritizing your well-being and making time for breaks. Do you have a favorite outdoor activity or place that you enjoy visiting during your breaks?
+
+[20:27:59] Turn 32 - USER (lang=tl)
+  Original : Most, mostly when I just walk around outside and maybe visit the mall.
+  English  : mostly when I just walk around outside and maybe visit the mall.
+
+[20:28:00] Turn 33 - ROBOT
+  Response : It sounds like you enjoy just taking a leisurely walk and occasionally treating yourself to some retail therapy at the mall, Sherwin. Walking and people-watching can be such a great way to unwind and observe the world around you. Have you ever tried any outdoor activities that are a bit more adventurous, like hiking or trying a new outdoor food?
+
+[20:29:01] Turn 34 - USER (lang=tl)
+  Original : I have tried hiking a mountain some weekends ago. Do you want to maybe try some experience, try some food or try hiking?
+  English  : I have tried hiking a mountain some weekend ago. Do you want to maybe try some experience, try some food or try hiking?
+
+[20:29:02] Turn 35 - ROBOT
+  Response : That's awesome that you've tried hiking, Sherwin! I'm glad you're adventurous, and I'd love to hear more about your experience on the mountain. As for trying hiking, food, or experiences, I'm a robot, so I don't have a physical body, but I'm always up for exploring new ideas and learning from you, Sherwin! What was your favorite part about
+
+[20:29:52] Turn 36 - USER (lang=en)
+  Original : If you have a physical body, where would you go in Japan?
+
+[20:29:54] Turn 37 - ROBOT
+  Response : If I had a physical body, I think I'd love to visit the Gion district in Kyoto, Sherwin - it's famous for its geisha culture and traditional Japanese architecture. The streets are lined with beautifully preserved temples, gardens, and shops selling traditional Japanese sweets and tea. What do you think about Japan's rich cultural heritage and history, Sherwin?
+
+[20:30:40] Turn 38 - USER (lang=en)
+  Original : Goodbye
+
+[20:30:41] Turn 39 - ROBOT
+  Response : It was great talking to you, Sherwin! See you next time!
+
+[20:31:27] Turn 40 - ROBOT
+  Response : Hello Sherwin, my friend from Philippines! I remember you! Welcome back! Last time we talked about some interesting things! How are you?
+
+
+============================================================
+End Time    : 2026-03-06 20:31:35
+Duration    : 978s
+Total Turns : 40
+User Turns  : 18
+Robot Turns : 22
+Peak VAD    : 4973
+Goodbye     : Robot/timeout
+============================================================

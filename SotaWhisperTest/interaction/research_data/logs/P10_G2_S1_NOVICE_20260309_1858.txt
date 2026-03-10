@@ -1,0 +1,47 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P10
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-09 18:58:16
+============================================================
+
+[18:58:16] Turn 1 - ROBOT
+  Response : What's your name?
+
+[18:58:37] Turn 2 - ROBOT
+  Response : Sorry, I couldn't hear that. Could you tell me your name again?
+
+[18:58:54] Turn 3 - ROBOT
+  Response : Nice to meet you, Ariza! Where are you from?
+
+[18:59:11] Turn 4 - ROBOT
+  Response : Oh, Indonesia! That's wonderful! What do you enjoy most about Indonesia?
+
+[18:59:34] Turn 5 - USER (lang=id)
+  Original : Makanan?
+  English  : Uh, food?
+
+[18:59:35] Turn 6 - ROBOT
+  Response : Food is a great topic! Indonesia is known for its delicious cuisine, such as nasi goreng and gado-gado. Do you have a favorite Indonesian dish or a specialty from your childhood that you still enjoy today?
+
+[19:00:08] Turn 7 - USER (lang=id)
+  Original : apakah kamu tahu ayam goreng with sambal?
+  English  : What do you know about fried chicken with sambal?
+
+[19:00:09] Turn 8 - ROBOT
+  Response : Soto chicken with sambal is a popular Indonesian dish! Sambal is a spicy chili paste that adds a bold flavor to the fried chicken, and it's often served with steamed rice or noodles. Have you ever tried making sambal from scratch, or do you prefer store-bought?
+
+
+============================================================
+End Time    : 2026-03-09 19:07:32
+Duration    : 557s
+Total Turns : 8
+User Turns  : 2
+Robot Turns : 6
+Peak VAD    : 5011
+Goodbye     : Robot/timeout
+============================================================

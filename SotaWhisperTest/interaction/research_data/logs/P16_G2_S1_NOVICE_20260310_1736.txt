@@ -1,0 +1,36 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P16
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 17:36:07
+============================================================
+
+[17:36:10] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[17:36:17] Turn 2 - ROBOT
+  Response : What's your name?
+
+[17:36:22] Turn 3 - ROBOT
+  Response : Sorry, I couldn't hear that. Could you tell me your name again?
+
+[17:36:43] Turn 4 - ROBOT
+  Response : Nice to meet you, See you in the next video! Where are you from?
+
+[17:37:16] Turn 5 - ROBOT
+  Response : So Bagaimana itu, I've always been fascinated by unique places, and I've heard that Bagaimana itu is home to some really interesting geological formations - are you living in an area with unique natural landscapes that you enjoy exploring?
+
+
+============================================================
+End Time    : 2026-03-10 17:37:46
+Duration    : 99s
+Total Turns : 5
+User Turns  : 0
+Robot Turns : 5
+Peak VAD    : 8033
+Goodbye     : Robot/timeout
+============================================================

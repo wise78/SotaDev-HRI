@@ -1,0 +1,48 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P14
+Group       : G2
+Session     : 2
+Condition   : NO-REMEMBER (NO-REMEMBER (No memory, no reciprocity (control)))
+Reciprocity : WOR
+Start Time  : 2026-03-10 19:15:43
+============================================================
+
+[19:15:51] Turn 1 - ROBOT
+  Response : Hey! You look familiar... you're the one from Indonesia, right? Sorry, what's your name again?
+
+[19:16:19] Turn 2 - ROBOT
+  Response : Abbas! Nice to meet you! So, what's life like in Indonesia?
+
+[19:16:47] Turn 3 - USER (lang=id)
+  Original : Ini Indonesia sangat sering terjadi budyan lebih.
+  English  : Thank you. Thank you. Thank you. Indonesia is very... very... very busy.
+
+[19:16:48] Turn 4 - ROBOT
+  Response : It sounds like you might have meant to express that Indonesia can be quite vibrant and dynamic. Do you have a favorite way to unwind after a busy day?
+
+[19:17:13] Turn 5 - USER (lang=id)
+  Original : Ya di Indonesia lagi musim hujan
+  English  : Yes, in Indonesia it's raining again.
+
+[19:17:14] Turn 6 - ROBOT
+  Response : Rainy days can be a great excuse to slow down and enjoy some quiet time. Do you have a favorite book or movie that you like to cozy up with on a rainy day?
+
+[19:17:39] Turn 7 - USER (lang=id)
+  Original : Oh, goodbye, Sota.
+  English  : Oh, goodbye Sota
+
+[19:17:40] Turn 8 - ROBOT
+  Response : It was great talking to you, Abbas! See you next time!
+
+
+============================================================
+End Time    : 2026-03-10 19:17:50
+Duration    : 127s
+Total Turns : 8
+User Turns  : 3
+Robot Turns : 5
+Peak VAD    : 9456
+Goodbye     : Robot/timeout
+============================================================

@@ -1,0 +1,58 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P15
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 16:22:57
+============================================================
+
+[16:23:00] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[16:23:08] Turn 2 - ROBOT
+  Response : What's your name?
+
+[16:23:17] Turn 3 - ROBOT
+  Response : Nice to meet you, Nabyu! Where are you from?
+
+[16:23:30] Turn 4 - ROBOT
+  Response : Oh, Indonesia! That's wonderful! What do you enjoy most about Indonesia?
+
+[16:23:52] Turn 5 - USER (lang=en)
+  Original : I enjoy like food and the culture.
+
+[16:23:53] Turn 6 - ROBOT
+  Response : Food and culture go hand in hand, don't they, Nabyu? Indonesian cuisine is known for its rich flavors and aromas, like nasi goreng and gado-gado. What's your favorite traditional Indonesian dish, and do you have a special fondness for any particular type of food?
+
+[16:24:34] Turn 7 - USER (lang=en)
+  Original : My special food is Nasi Groning.
+
+[16:24:35] Turn 8 - ROBOT
+  Response : Nasi goreng is a classic! It's a staple in Indonesian cuisine, and its popularity has spread to many countries around the world. Do you have a secret ingredient or a family recipe that makes your nasi goreng stand out from the rest?
+
+[16:25:13] Turn 9 - USER (lang=id)
+  Original : Gada, gak ada resep apa-apa. Aku cuma beli dari cucumber ring.
+  English  : There is no such thing as a receipt. I just bought it from the conveyor belt.
+
+[16:25:15] Turn 10 - ROBOT
+  Response : Fair enough, Nabyu! Convenience food can be a great option when you're in a hurry. I can imagine a conveyor belt offering all sorts of tasty options. Do you like trying different foods at the conveyor belt, or do you stick to what you know and love?
+
+[16:25:51] Turn 11 - USER (lang=en)
+  Original : Okay, I'll next you see it too.
+
+[16:25:52] Turn 12 - ROBOT
+  Response : I think there might have been a bit of a misunderstanding, Nabyu! You're saying that the next time you see it, you'll try it too? Or maybe you meant that the conveyor belt will offer it to you next time? Either way, I'm curious to know: what made you consider trying something new from the conveyor belt?
+
+
+============================================================
+End Time    : 2026-03-10 16:26:52
+Duration    : 235s
+Total Turns : 12
+User Turns  : 4
+Robot Turns : 8
+Peak VAD    : 2814
+Goodbye     : Robot/timeout
+============================================================

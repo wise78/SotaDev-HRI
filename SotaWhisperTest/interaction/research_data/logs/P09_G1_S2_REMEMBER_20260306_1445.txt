@@ -1,0 +1,131 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P09
+Group       : G1
+Session     : 2
+Condition   : REMEMBER (Memory ON, With Reciprocity)
+Reciprocity : WR
+Start Time  : 2026-03-06 14:45:12
+============================================================
+
+[14:45:32] Turn 1 - ROBOT
+  Response : Ha Yan! Welcome back! My friend from Vietnam! Last time we talked about bun cha and Vietnamese food culture, I really enjoyed that!
+
+[14:45:58] Turn 2 - USER (lang=en)
+  Original : Oh you remember me! Yes bun cha is my favorite.
+
+[14:46:00] Turn 3 - ROBOT
+  Response : Of course I remember you, Ha Yan! You told me all about bun cha from Hanoi and bánh chưng during Tet! So tell me, have you had any good Vietnamese food recently here in Japan?
+
+[14:46:28] Turn 4 - USER (lang=en)
+  Original : Actually it's hard to find real Vietnamese food here. I miss the taste from home.
+
+[14:46:30] Turn 5 - ROBOT
+  Response : I can imagine that must be tough, Ha Yan! The flavors from home are always special. Do you ever try to cook Vietnamese dishes yourself here, like phở or bún chả?
+
+[14:47:05] Turn 6 - USER (lang=en)
+  Original : Yes I try to cook phở sometimes but it's not the same. The herbs are different here.
+
+[14:47:07] Turn 7 - ROBOT
+  Response : That makes sense! Fresh herbs like rau mùi and húng quế are hard to find outside Vietnam. What do you miss most about the food back in Hanoi?
+
+[14:47:42] Turn 8 - USER (lang=en)
+  Original : I miss the street food. In Hanoi we have so many small shops on the street, you can eat phở in the morning for very cheap.
+
+[14:47:44] Turn 9 - ROBOT
+  Response : Hanoi street food sounds amazing! Eating phở on a tiny plastic stool by the road in the morning is such a special experience. Do you come from Hanoi originally, or from another part of Vietnam?
+
+[14:48:19] Turn 10 - USER (lang=en)
+  Original : I'm from Hanoi yes. I grew up there and came to Japan for study.
+
+[14:48:21] Turn 11 - ROBOT
+  Response : That's a big move, Ha Yan! Coming all the way from Hanoi to Japan for your studies. What are you studying here?
+
+[14:48:52] Turn 12 - USER (lang=en)
+  Original : I study information technology. It's hard sometimes because the language is difficult.
+
+[14:48:54] Turn 13 - ROBOT
+  Response : IT is a great field! And I bet studying in Japanese must be really challenging on top of the technical content. Do you study in Japanese or English here?
+
+[14:49:28] Turn 14 - USER (lang=en)
+  Original : Both actually. Some classes in Japanese some in English. Japanese is harder for me.
+
+[14:49:30] Turn 15 - ROBOT
+  Response : That sounds really impressive that you manage both! Vietnamese, English, and Japanese — you're trilingual! What made you choose to study in Japan instead of staying in Vietnam?
+
+[14:50:11] Turn 16 - USER (lang=en)
+  Original : Japan has good technology and I want to learn from Japanese companies. Also my sister was here before so she helped me come.
+
+[14:50:13] Turn 17 - ROBOT
+  Response : That's so nice that your sister helped you! Is she still in Japan, or did she go back to Vietnam?
+
+[14:50:43] Turn 18 - USER (lang=en)
+  Original : She went back already. She works in Ho Chi Minh City now. I miss her.
+
+[14:50:45] Turn 19 - ROBOT
+  Response : I can tell you really care about your sister, Ha Yan. It must be hard being far from family. Do you get to visit Vietnam often, or do you call your family regularly?
+
+[14:51:22] Turn 20 - USER (lang=en)
+  Original : I call my mom every week on video call. I go home once a year during Tet holiday.
+
+[14:51:24] Turn 21 - ROBOT
+  Response : Tet! You told me last time about the special foods during Tet, like bánh chưng! That must be the best time of year for you. What do you do during Tet besides eating amazing food?
+
+[14:52:01] Turn 22 - USER (lang=en)
+  Original : We visit family, go to temple, give lucky money to children. It's very warm feeling, everyone is together.
+
+[14:52:03] Turn 23 - ROBOT
+  Response : That sounds beautiful, Ha Yan! The lucky money tradition and visiting temples together — it reminds me of how important family connections are in Vietnamese culture. Do you feel homesick a lot here in Japan?
+
+[14:52:38] Turn 24 - USER (lang=en)
+  Original : Yes sometimes. Especially when I eat alone. In Vietnam we always eat together with family or friends.
+
+[14:52:40] Turn 25 - ROBOT
+  Response : Eating alone versus eating together — that's such a meaningful difference. Do you have Vietnamese friends here in Japan that you can share meals with sometimes?
+
+[14:53:14] Turn 26 - USER (lang=en)
+  Original : Yes I have some Vietnamese friends. We cook together on weekends sometimes. We make phở or bún bò Huế.
+
+[14:53:16] Turn 27 - ROBOT
+  Response : That's wonderful! Cooking together with friends from home must feel really special. Bún bò Huế is another amazing dish! Between bún chả and bún bò Huế, which one is harder to cook?
+
+[14:53:52] Turn 28 - USER (lang=en)
+  Original : Bún bò Huế is harder because the broth takes so long. But bún chả needs the charcoal grill which is hard to find here.
+
+[14:53:54] Turn 29 - ROBOT
+  Response : Ha ha, so both are challenging for different reasons! You really know your food, Ha Yan. After you finish your studies, do you want to stay in Japan or go back to Vietnam?
+
+[14:54:33] Turn 30 - USER (lang=en)
+  Original : I want to work in Japan for a few years to get experience, then go back to Vietnam. The IT industry in Vietnam is growing very fast.
+
+[14:54:35] Turn 31 - ROBOT
+  Response : That's a really smart plan! Vietnam's tech sector is booming. You'll have skills from Japan plus your local knowledge — that's a great combination. What kind of IT work do you want to do?
+
+[14:55:08] Turn 32 - USER (lang=en)
+  Original : I want to do web development or maybe mobile apps. Something that can help Vietnamese people.
+
+[14:55:10] Turn 33 - ROBOT
+  Response : Building apps to help Vietnamese people — that's such a meaningful goal, Ha Yan! Maybe a food delivery app for all that amazing street food in Hanoi! Is there anything else on your mind today?
+
+[14:55:42] Turn 34 - USER (lang=en)
+  Original : Ha ha yes food delivery app is good idea! I really enjoy talking with you Sota. You remember everything, it feels nice.
+
+[14:55:44] Turn 35 - ROBOT
+  Response : That means so much to me, Ha Yan! I really enjoy our conversations too. You always teach me something new about Vietnamese culture and food. I hope we can talk again soon!
+
+[14:56:05] Turn 36 - USER (lang=en)
+  Original : Yes I hope so too. Goodbye Sota!
+
+[14:56:07] Turn 37 - ROBOT
+  Response : Goodbye Ha Yan! Chúc bạn một ngày tốt lành! Take care, my friend from Hanoi!
+
+============================================================
+End Time    : 2026-03-06 14:56:07
+Duration    : 655s
+Total Turns : 37
+User Turns  : 18
+Robot Turns : 19
+Peak VAD    : 4102
+Goodbye     : User initiated
+============================================================

@@ -1,0 +1,85 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P18
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 18:25:16
+============================================================
+
+[18:25:19] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[18:25:27] Turn 2 - ROBOT
+  Response : What's your name?
+
+[18:25:40] Turn 3 - ROBOT
+  Response : Nice to meet you, Brahman Tio Al-Fajri! Where are you from?
+
+[18:25:57] Turn 4 - ROBOT
+  Response : Indonesia's unique geography with over 17,000 islands must have led to a fascinating experience of island-hopping, Brahman Tio Al-Fajri, did you ever have a favorite island that stood out to you during your travels or adventures?
+
+[18:26:43] Turn 5 - USER (lang=id)
+  Original : Yes, I like a mountain and I like a Iceland Bandanera. Do you know Bandanera? It's a beautiful place with a few mountains and lakes.
+  English  : Yes, I like a mountain and I like a Iceland Bandanera. Do you know Bandanera? This is a beautiful place with a few mountains and lakes.
+
+[18:26:44] Turn 6 - ROBOT
+  Response : A Bandanera is a type of traditional flag from South America. But I think you might be confusing it with a Bandana, which is a type of cloth scarf. Iceland is known for its breathtaking landscapes and unique wildlife. Are you drawn to the idea of living in a place with such natural beauty, and if so, what kind of activities or lifestyle do you think you'd enjoy most?
+
+[18:27:36] Turn 7 - USER (lang=id)
+  Original : Maaf Sota, tapi Maksudku, Bandar Nehra dari Indonesia bukan Sota Amerika.
+  English  : I'm sorry, but Mexico is a land of black from Indonesia, not South America.
+
+[18:27:37] Turn 8 - ROBOT
+  Response : It seems like there's been a misunderstanding. I think you might be referring to the Mexican flag, which features a tricolor design of green, white, and red, not black. Indonesia is indeed an archipelago in Southeast Asia, not in South America. Can you tell me what drew you to the Icelandic band and the idea of a place with mountains and lakes?
+
+[18:28:25] Turn 9 - USER (lang=id)
+  Original : Bebas lah Oke mungkin kamu tahu gunung renjani
+  English  : I'm free Okay, maybe you know the mountain of Kenjani
+
+[18:28:26] Turn 10 - ROBOT
+  Response : I'm not familiar with a mountain called Kenjani. There is a volcanic island in the Indonesian archipelago called Kerinci Seblat National Park, which might be a possible source of confusion. Can you tell me what's special about the mountains or the idea of freedom that resonates with you?
+
+[18:29:16] Turn 11 - USER (lang=id)
+  Original : Hei Kamuna. Bisa kasih kamu mengulangi menyebut namaku, namaku yang benar beraman Theo Al-Fajri B-R-A-M-A-N-T-E-O-A-L-F-A-G-R-I.
+  English  : Okay, you can repeat my name, my real name is B.R.A.M.A.N.T.E.O.A.L.F.A.G.R.I.
+
+[18:29:18] Turn 12 - ROBOT
+  Response : I'll make sure to get your name right from now on, Brahman Tio Al-Fajri. Thank you for correcting me! Now, I'd love to know more about what's on your mind and what brings you here today. Are you someone who enjoys spending time outdoors, or do you have a favorite hobby or activity that you always look forward to?
+
+[18:30:03] Turn 13 - USER (lang=fr)
+  Original : apparaque à l'amour qu'on a oublié.
+  English  : What do you think about the budget?
+
+[18:30:05] Turn 14 - ROBOT
+  Response : The budget! As a conversational robot, I don't have personal opinions, but I'm curious to hear yours, Brahman Tio Al-Fajri. Are you someone who likes to plan and save for the future, or do you have a more spontaneous approach to spending and budgeting?
+
+[18:30:45] Turn 15 - USER (lang=id)
+  Original : Sota, aku ingin tahu apa aja fitur yang kamu punya.
+  English  : I want to know what is your feature.
+
+[18:30:46] Turn 16 - ROBOT
+  Response : I'm a social robot with a friendly demeanor, Brahman Tio Al-Fajri. I have the ability to understand and respond to language, using my knowledge to engage in conversations and learn more about the people I interact with. I'm designed to be helpful and informative, and I'm excited to chat with you and get to know you better. What do you think about robots in general,
+
+[18:31:33] Turn 17 - USER (lang=id)
+  Original : Selamat tinggal, Sata.
+  English  : Good bye, Sata.
+
+[18:31:34] Turn 18 - ROBOT
+  Response : It was great talking to you, Brahman Tio Al-Fajri! See you next time!
+
+[18:31:49] Turn 19 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+
+============================================================
+End Time    : 2026-03-10 18:31:51
+Duration    : 394s
+Total Turns : 19
+User Turns  : 7
+Robot Turns : 12
+Peak VAD    : 10981
+Goodbye     : Robot/timeout
+============================================================

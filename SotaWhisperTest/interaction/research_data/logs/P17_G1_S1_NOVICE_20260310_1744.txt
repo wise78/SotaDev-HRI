@@ -1,0 +1,80 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P17
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 17:44:08
+============================================================
+
+[17:44:17] Turn 1 - ROBOT
+  Response : What's your name?
+
+[17:44:33] Turn 2 - ROBOT
+  Response : Nice to meet you, Sidi! Where are you from?
+
+[17:44:49] Turn 3 - ROBOT
+  Response : What's a lesser-known hidden gem in London that you've stumbled upon during your explorations?
+
+[17:45:16] Turn 4 - USER (lang=id)
+  Original : Saya memiliki pengalaman yang baik di stadium MR.
+  English  : I have a good experience at the Emirate Stadium.
+
+[17:45:16] Turn 5 - ROBOT
+  Response : Did the atmosphere at the Emirates Stadium match your expectations?
+
+[17:45:47] Turn 6 - USER (lang=id)
+  Original : Iya, sangat-sangat cocok dengan ekspektasi saya. Ethon Syria sangat-sangat baik, sangat-sangat meriah.
+  English  : Yes, it's very suitable for my expectations. The atmosphere is very good, very lively.
+
+[17:45:47] Turn 7 - ROBOT
+  Response : The fans' energy can really add to the excitement of a live match, can't it? Do you have a favorite team that you like to watch at the Emirates?
+
+[17:46:24] Turn 8 - USER (lang=en)
+  Original : Yeah, I really love Arsenault and I really hate Tottenham.
+
+[17:46:25] Turn 9 - ROBOT
+  Response : Gooners unite! Are you more of a casual fan, or do you follow the team's progress closely throughout the season?
+
+[17:47:01] Turn 10 - USER (lang=id)
+  Original : Ya, saya mengikuti semuanya di season ini. Arsenal sekarang sedang berada di Puncak Plasmen. Anjir, akhirnya. Disi panjang, kan?
+  English  : Yes, I'm following all of these decisions. Arsenal is now at the top of the classmen. Oh, the last one. Is it long?
+
+[17:47:03] Turn 11 - ROBOT
+  Response : It sounds like you're invested in the team's success. As for the season schedule, it can be quite long, but it's worth it to see your team win. Are there any players you're particularly excited about, or perhaps any transfer rumors that you're keeping an eye on?
+
+[17:47:58] Turn 12 - USER (lang=id)
+  Original : Oke, baik-baik saja!
+  English  : Okay, good guys
+
+[17:47:59] Turn 13 - ROBOT
+  Response : "Good guys" indeed! It sounds like you're feeling optimistic about the team's prospects. Are there any personal experiences or memories associated with Arsenal that make following the team so special for you?
+
+[17:48:44] Turn 14 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[17:49:11] Turn 15 - USER (lang=id)
+  Original : Selamat tinggal, Sota. Sota. Happy. Saya nara dia ngerti aja. Ngerti?
+  English  : Good bye Sota Sota Happy, I need to go back to sleep Sona, is he dead? Yes, he is
+
+[17:49:11] Turn 16 - ROBOT
+  Response : It was great talking to you, Sidi! See you next time!
+
+[17:49:24] Turn 17 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[17:49:32] Turn 18 - ROBOT
+  Response : What's your name?
+
+
+============================================================
+End Time    : 2026-03-10 18:08:57
+Duration    : 1489s
+Total Turns : 18
+User Turns  : 6
+Robot Turns : 12
+Peak VAD    : 14709
+Goodbye     : Robot/timeout
+============================================================

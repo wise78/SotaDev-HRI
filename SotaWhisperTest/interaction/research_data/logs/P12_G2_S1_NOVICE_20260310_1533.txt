@@ -1,0 +1,92 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P12
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 15:33:17
+============================================================
+
+[15:33:19] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[15:33:27] Turn 2 - ROBOT
+  Response : What's your name?
+
+[15:33:52] Turn 3 - ROBOT
+  Response : Nice to meet you, Risky! Where are you from?
+
+[15:34:30] Turn 4 - ROBOT
+  Response : Oh, Indonesia! That's wonderful! What do you enjoy most about Indonesia?
+
+[15:34:56] Turn 5 - USER (lang=en)
+  Original : I like the food and the scenery in here.
+
+[15:34:58] Turn 6 - ROBOT
+  Response : The cuisine here is quite diverse, and I'm sure you're enjoying some of the local flavors. Have you tried any traditional Indonesian dishes while you've been here, like nasi goreng or gado-gado?
+
+[15:35:31] Turn 7 - USER (lang=en)
+  Original : Yes, I like Nasi Goreng, but I prefer more Mi Goreng.
+
+[15:35:32] Turn 8 - ROBOT
+  Response : Mi Goreng is a classic! I can see why you'd prefer it - the stir-fried noodles are so flavorful. Do you have a favorite way to customize your Mi Goreng, like adding sambal or extra vegetables?
+
+[15:36:16] Turn 9 - USER (lang=en)
+  Original : I like it with a lot of age.
+
+[15:36:16] Turn 10 - ROBOT
+  Response : I'm guessing you mean "kecap manis", which is a sweet soy sauce commonly used in Mi Goreng. It adds a nice depth of flavor, doesn't it?
+
+[15:36:56] Turn 11 - USER (lang=id)
+  Original : iya, ada apa-apa pilih Indonesia yang terkenal? oke, gimana sih? maksud? iya bebas-bebas, bahasa Indonesia juga gak apa-apa tiba-tiba Indonesia gitu, gak apa-apa gak apa-apa
+  English  : Yes, do you have any favorite Indonesian food on? Okay, thank you. Thank you. Thank you. Thank you. Thank you. Thank you.
+
+[15:36:57] Turn 12 - ROBOT
+  Response : Ha ha, it seems like you're excited about food! Let me try that again, in a more polite tone. Do you have a favorite Indonesian dish that you just can't get enough of, like rendang or sate?
+
+[15:37:35] Turn 13 - USER (lang=id)
+  Original : Mungkin makanan lain yang aku suka salah satunya rendang sih, dia punya banyak rasa yang ini.
+  English  : Maybe the other food that I like, one of them is rendang, it has a lot of taste.
+
+[15:37:36] Turn 14 - ROBOT
+  Response : Rendang is a classic! The slow-cooked coconut milk and spices really bring out the flavor of the meat, doesn't it? What do you like to eat on a typical day, aside from Indonesian cuisine?
+
+[15:38:02] Turn 15 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[15:38:31] Turn 16 - USER (lang=id)
+  Original : ngomong lagi coba aku suka yang banyak menggunakan kantan karena itu menambahkan sakur di timbakanan
+  English  : I want to talk to you again. I like to use a lot of words. Because that's why I added a lot of food.
+
+[15:38:32] Turn 17 - ROBOT
+  Response : You're a talkative one, and I love it! I think it's great that you want to share your thoughts and feelings with me. Are you a writer or do you enjoy expressing yourself through words in a different way, like writing stories or poetry?
+
+[15:39:13] Turn 18 - USER (lang=id)
+  Original : Aku suka baca buku dan baca beberapa kue situasi lama di Indonesia.
+  English  : I like to read books and read a few poems for a long time in Indonesia.
+
+[15:39:15] Turn 19 - ROBOT
+  Response : That's wonderful! Reading is such a great way to escape and learn new things. What kind of books and poems do you enjoy reading the most - are you more into classical Indonesian literature, like Pramoedya Ananta Toer, or do you prefer contemporary authors or poetry from Indonesia?
+
+[15:40:07] Turn 20 - USER (lang=id)
+  Original : Sampai jumpa lagi, goodbye.
+  English  : I'll see you again, goodbye. Bye. Bye. Goodbye. Goodbye. Goodbye.
+
+[15:40:09] Turn 21 - ROBOT
+  Response : It was great talking to you, Risky! See you next time!
+
+[15:40:22] Turn 22 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+
+============================================================
+End Time    : 2026-03-10 15:40:29
+Duration    : 432s
+Total Turns : 22
+User Turns  : 8
+Robot Turns : 14
+Peak VAD    : 12123
+Goodbye     : Robot/timeout
+============================================================

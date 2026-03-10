@@ -1,0 +1,47 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P07
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-06 11:12:59
+============================================================
+
+[11:13:17] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Latin America?
+
+[11:13:29] Turn 2 - ROBOT
+  Response : What's your name?
+
+[11:13:44] Turn 3 - ROBOT
+  Response : Nice to meet you, No! Indonesia, that's cool! What do you enjoy most about living there?
+
+[11:14:06] Turn 4 - USER (lang=en)
+  Original : I like the transportation and then their foods.
+
+[11:14:17] Turn 5 - ROBOT
+  Response : Transportation and food are big parts of Indonesian culture, aren't they? Do you have a favorite mode of transportation, like an angkot (those colorful motorcycles) or a satay food truck?
+
+[11:14:56] Turn 6 - USER (lang=en)
+  Original : I actually like the commuter train and then also their bus route and then for the foods I like my favorite one was like
+
+[11:14:57] Turn 7 - ROBOT
+  Response : The commuter train and bus routes are great for getting around, aren't they? It sounds like you're really fond of Indonesian food, but your sentence got a bit cut off. Were you going to say your favorite dish, like nasi goreng or gado-gado?
+
+[11:15:36] Turn 8 - USER (lang=en)
+  Original : Gotta go do some snice. Yeah, I also like it. I also like their chicken noodles.
+
+[11:15:37] Turn 9 - ROBOT
+  Response : It was great talking to you, No! See you next time!
+
+============================================================
+End Time    : 2026-03-06 11:15:37
+Duration    : 158s
+Total Turns : 9
+User Turns  : 3
+Robot Turns : 6
+Peak VAD    : 4601
+Goodbye     : User initiated
+============================================================

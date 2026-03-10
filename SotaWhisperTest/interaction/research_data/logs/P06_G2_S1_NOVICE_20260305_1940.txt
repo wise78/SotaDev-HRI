@@ -1,0 +1,41 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P06
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-05 19:40:08
+============================================================
+
+[19:40:20] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Europe or America?
+
+[19:40:32] Turn 2 - ROBOT
+  Response : What's your name?
+
+[19:40:39] Turn 3 - ROBOT
+  Response : Nice to meet you, Yassika! Where are you from?
+
+[19:40:50] Turn 4 - ROBOT
+  Response : Oh, Dominican republic! That's wonderful! What do you enjoy most about Dominican republic?
+
+[19:41:08] Turn 5 - USER (lang=en)
+  Original : and the weather.
+
+[19:41:12] Turn 6 - ROBOT
+  Response : It's a beautiful day, isn't it, Yassika? I hope you're enjoying the sunshine after a lovely breakfast of mangú and tostones, perhaps with a cup of strong Dominican coffee? How's your morning going so far?
+
+[19:41:37] Turn 7 - ROBOT
+  Response : It was great talking to you, Yassika! See you next time!
+
+============================================================
+End Time    : 2026-03-05 19:41:37
+Duration    : 89s
+Total Turns : 7
+User Turns  : 1
+Robot Turns : 6
+Peak VAD    : 2504
+Goodbye     : Robot/timeout
+============================================================

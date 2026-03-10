@@ -1,0 +1,56 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P19
+Group       : G1
+Session     : 2
+Condition   : REMEMBER (REMEMBER (Memory active, with reciprocity))
+Reciprocity : WR
+Start Time  : 2026-03-10 19:26:23
+============================================================
+
+[19:26:24] Turn 1 - ROBOT
+  Response : Hello Rio Juharno, my friend from Cirebon, Indonesia! I remember you! Welcome back! Last time we talked about some interesting things! How are you?
+
+[19:27:04] Turn 2 - USER (lang=id)
+  Original : Halo Sota, ayo kita bicara yang lebih, ya? Ayo, kita bicara yang lebih emosional lagi. Kamu punya tips biar orang bisa cepat move on ga sih?
+  English  : Hello Sota, let's talk about the more emotional way. Do you have tips for people who can move on quickly?
+
+[19:27:06] Turn 3 - ROBOT
+  Response : Rio, I think that's a very interesting question. I've observed that people who can move on quickly often have a strong sense of self-awareness and are able to recognize when a particular experience or relationship has run its course. Do you think it's possible to be too self-aware, and if so, what would be the consequences of having that kind of awareness?
+
+[19:28:05] Turn 4 - USER (lang=id)
+  Original : Ya, sebenernya aku juga kurang mau memahami tentang perasaanku sih ya. Tapi aku merasa sekarang kesiharianku sudah mulai sedikit terganggu dengan rasa gagal mukaanku ini. Kamu punya tips entry?
+  English  : Well, actually, I also don't understand my feelings, but I feel that my daily life has started to be a little messed up with my gagal mood. Do you have any tips for entering?
+
+[19:28:07] Turn 5 - ROBOT
+  Response : Rio, it can be really tough to navigate through a period of emotional turmoil. One thing that might help is to try and identify what's causing your gagal mood, even if it's just a sense of unease. Sometimes, taking a step back and exploring your thoughts and feelings can help you gain a better understanding of what's going on. Have you tried journaling or talking to someone about
+
+[19:29:09] Turn 6 - USER (lang=id)
+  Original : Iya, aku sudah pernah mencoba untuk seperti membuat keseharianku yang titul di skenderan sebuah tulisannya seperti jurnal yang seperti itu. Dan aku pun sudah mencoba untuk menghubungi dengan mantanku ini.
+  English  : Yes, I have tried to make my daily writing like a journal, and I have also tried to communicate with my team.
+
+[19:29:11] Turn 7 - ROBOT
+  Response : It sounds like you're already taking some proactive steps to address your emotions, Rio. Writing down your thoughts and feelings can be really helpful in processing and releasing them, and communicating with your team can provide you with a support system and help you gain new perspectives. Do you find that your team's responses have been helpful in lifting your mood, or is there still a sense of stuckness that you're
+
+[19:30:16] Turn 8 - USER (lang=id)
+  Original : Hmm, dekatnya memang aku sulit ya, untuk bisa memahami perasaanku sendiri, mari kita bicara dengan lain. Kira-kira kamu punya rekomendasi menu untuk berbuka puasa nggak, Sota?
+  English  : Hmm, it's hard for me to understand my own feelings. Let's talk to someone else. Do you think you have a recommendation to open a fasting menu?
+
+[19:30:18] Turn 9 - ROBOT
+  Response : Rio, I understand that talking about your feelings can be a process, and sometimes it's helpful to explore other interests. As for opening a fasting menu, I'm not sure if that's something you'd be interested in pursuing, but I can tell you that many people are interested in healthy eating options. Have you always been interested in food and nutrition, or is there something specific about fasting that's
+
+[19:31:24] Turn 10 - USER (lang=id)
+  Original : yang aku pikirkan sekarang adalah sesuatu makanan yang pedas, namun tidak terlalu berminyak dan mungkin sedikit asin-asin seperti keju dan protain kali ya
+  English  : What I think now is something spicy, but not too oily, and maybe a little salty, salty, like ketchup, and protein maybe.
+
+
+============================================================
+End Time    : 2026-03-10 19:41:40
+Duration    : 918s
+Total Turns : 10
+User Turns  : 5
+Robot Turns : 5
+Peak VAD    : 9784
+Goodbye     : Robot/timeout
+============================================================

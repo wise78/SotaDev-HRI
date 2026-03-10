@@ -1,0 +1,39 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P01
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-05 11:25:36
+============================================================
+
+[11:26:02] Turn 1 - ROBOT
+  Response : What's your name?
+
+[11:26:11] Turn 2 - ROBOT
+  Response : Nice to meet you, Azul! Which country in Asia are you from?
+
+[11:26:25] Turn 3 - ROBOT
+  Response : Oh, Singapore! That's wonderful! What do you enjoy most about Singapore?
+
+[11:26:47] Turn 4 - USER (lang=en)
+  Original : the rapid community and the technology in there is so fast.
+
+[11:26:50] Turn 5 - ROBOT
+  Response : Singapore's innovative spirit and blend of traditional and modern culture really make it a fascinating place, don't they? Have you tried any of the delicious street food while exploring the city?
+
+[11:27:13] Turn 6 - ROBOT
+  Response : It was great talking to you, Azul! See you next time!
+
+
+============================================================
+End Time    : 2026-03-05 11:27:30
+Duration    : 114s
+Total Turns : 6
+User Turns  : 1
+Robot Turns : 5
+Peak VAD    : 2832
+Goodbye     : Robot/timeout
+============================================================

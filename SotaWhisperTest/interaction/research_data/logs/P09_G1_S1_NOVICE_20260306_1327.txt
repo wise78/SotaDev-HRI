@@ -1,0 +1,69 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P09
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-06 13:27:07
+============================================================
+
+[13:27:37] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Asia?
+
+[13:27:48] Turn 2 - ROBOT
+  Response : What's your name?
+
+[13:28:02] Turn 3 - ROBOT
+  Response : Nice to meet you, Ha Yan! Where are you from?
+
+[13:28:13] Turn 4 - ROBOT
+  Response : Oh, Vietnam! That's wonderful! What do you enjoy most about Vietnam?
+
+[13:28:34] Turn 5 - USER (lang=en)
+  Original : I think it's food culture.
+
+[13:28:37] Turn 6 - ROBOT
+  Response : Food culture is a big part of Vietnamese heritage, Ha Yan! What's your favorite Vietnamese dish, and have you ever tried cooking it yourself?
+
+[13:29:06] Turn 7 - USER (lang=en)
+  Original : I would like to introduce Mun Cha.
+
+[13:29:07] Turn 8 - ROBOT
+  Response : Mun Cha is a popular Vietnamese salad, Ha Yan! It's often served as a side dish in Vietnamese cuisine. Have you ever had it at a traditional Vietnamese festival or celebration, like Tet?
+
+[13:29:51] Turn 9 - USER (lang=vi)
+  Original : In that holiday, we have bánh trưng bún chả.
+  English  : In that holiday, we have banh chung, bun cha.
+
+[13:29:52] Turn 10 - ROBOT
+  Response : Those are traditional dishes often served during Tet and other Vietnamese holidays, Ha Yan! Banh chung is a glutinous rice cake, and bun cha is a popular dish from the north, originating from Hanoi. Do you have a favorite way to enjoy bun cha, with grilled pork or chicken?
+
+[13:30:29] Turn 11 - USER (lang=en)
+  Original : Yes, yes, I really like it.
+
+[13:30:30] Turn 12 - ROBOT
+  Response : Bun cha is definitely a crowd-pleaser, Ha Yan! When you're not enjoying bun cha, do you have any other hobbies or interests that you're passionate about?
+
+[13:31:20] Turn 13 - USER (lang=en)
+  Original : R�J .... aside
+
+[13:31:22] Turn 14 - ROBOT
+  Response : It seems like there was a bit of a misunderstanding, Ha Yan. I couldn't quite catch the translation. Could you try rephrasing, and I'll do my best to understand and respond?
+
+[13:31:49] Turn 15 - USER (lang=en)
+  Original : goodbye
+
+[13:31:50] Turn 16 - ROBOT
+  Response : It was great talking to you, Ha Yan! See you next time!
+
+============================================================
+End Time    : 2026-03-06 13:31:50
+Duration    : 283s
+Total Turns : 16
+User Turns  : 5
+Robot Turns : 11
+Peak VAD    : 3854
+Goodbye     : User initiated
+============================================================

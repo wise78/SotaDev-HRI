@@ -103,6 +103,7 @@ public class LlamaClient {
             String payload = "{\"model\":\"" + modelName + "\","
                 + "\"messages\":" + messagesJson + ","
                 + "\"stream\":true,"
+                + "\"keep_alive\":-1,"
                 + "\"options\":{\"num_predict\":" + maxPredict + "}}";
 
             try (OutputStream os = conn.getOutputStream()) {

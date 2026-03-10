@@ -1,0 +1,68 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P19
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 18:58:39
+============================================================
+
+[18:58:43] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[18:58:50] Turn 2 - ROBOT
+  Response : What's your name?
+
+[18:59:05] Turn 3 - ROBOT
+  Response : Nice to meet you, Rio Juarnoputra! Where are you from?
+
+[18:59:33] Turn 4 - ROBOT
+  Response : I've heard Cirbon City is known for its vibrant night markets. Do you have a favorite stall or dish that you always look forward to trying when you're back there?
+
+[19:00:13] Turn 5 - USER (lang=id)
+  Original : Sepertinya kamu salah menangkap Cirbon City deh, yang aku maksud adalah kota Cirbon yang berada di Jawa Barat, yang berada di Provinsi Jawa Barat, negara Indonesia.
+  English  : It seems that you are wrong to accept the city of Cirebon, which I mean the city of Cirebon, which is in West Java, which is in the West Java province, Indonesia.
+
+[19:00:15] Turn 6 - ROBOT
+  Response : I didn't catch the nuances of your words, Rio. It sounds like you were clarifying that the city of Cirebon is indeed a specific place in Indonesia. I'm glad we could clear that up. What do you think is the most interesting thing about Cirebon, or has it had an impact on your life in some way?
+
+[19:01:12] Turn 7 - USER (lang=id)
+  Original : Ya, Cirbon adalah kota kelahiranku. Aku kecil dan besar di sana. Jadi menurutku kota Cirbon ini sangat memiliki peran yang sangat besar bagi hidupku.
+  English  : Yes, Cirbon is my hometown. I'm small and big there. So in my opinion, this city of Cirbon has a very big role in my life.
+
+[19:01:14] Turn 8 - ROBOT
+  Response : It's great that you have a strong connection to your hometown, Rio. Growing up in one place can shape your perspective and experiences in many ways. Did you have a favorite thing to do or explore as a kid in Cirebon, or was there a particular place that held a special meaning for you?
+
+[19:02:05] Turn 9 - USER (lang=id)
+  Original : ya menurutku sekarang aku tinggal di kota prokerto dan kota prokerto menurutku juga itu adalah kota yang sangat nyaman sekali kalau kamu berasal dari kota mana?
+  English  : Well, in my opinion, now I live in the city of Prokerto, and the city of Prokerto, in my opinion, it is also a very comfortable city, if you come from which city?
+
+[19:02:06] Turn 10 - ROBOT
+  Response : It sounds like you're saying that Prokerto is also a city you feel comfortable in, Rio. I'm not familiar with Prokerto, is it a place you're particularly fond of visiting or do you have family or friends there?
+
+[19:02:50] Turn 11 - USER (lang=id)
+  Original : Bukan pro-kerto, tapi purwokerto, ya aku memiliki banyak teman-banyak teman di sini dan beberapa keluarga dari buku.
+  English  : not prokerto but pure wokerto I have a lot of friends here and several families from my mother
+
+[19:02:51] Turn 12 - ROBOT
+  Response : So you have a strong social network in this area, Rio. Having friends and family ties can make a big difference in one's life. What kind of activities or hobbies do you and your friends enjoy doing together?
+
+[19:03:23] Turn 13 - USER (lang=id)
+  Original : Oke, senang bisa berbicara denganmu, Sota. Goodbye!
+  English  : Okay, I'm happy to talk to you, Sota. Goodbye!
+
+[19:03:25] Turn 14 - ROBOT
+  Response : It was great talking to you, Rio Juarnoputra! See you next time!
+
+
+============================================================
+End Time    : 2026-03-10 19:03:37
+Duration    : 298s
+Total Turns : 14
+User Turns  : 5
+Robot Turns : 9
+Peak VAD    : 7805
+Goodbye     : Robot/timeout
+============================================================

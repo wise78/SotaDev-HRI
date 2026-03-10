@@ -10,10 +10,10 @@ import jp.vstone.RobotLib.CSotaMotion;
  * Manages dynamic gestures, LED colors, and motion based on interaction state.
  * Runs gesture + LED loops in background daemon threads.
  *
- * Servo IDs (Sota):
- *   1=HEAD_Y (Yaw/L-R),  2=HEAD_P (Pitch/Up-Down),  3=HEAD_R (Roll/Tilt)
- *   4=BODY_Y (Rotation)
- *   5=L_SHOULDER_P,  6=R_SHOULDER_P,  7=L_ELBOW_P,  8=R_ELBOW_P
+ * Servo IDs (Sota — from official axis diagram):
+ *   1=BODY_Y (腰ヨー),  2=L_SHOULDER_P,  3=L_ELBOW_P
+ *   4=R_SHOULDER_P,  5=R_ELBOW_P
+ *   6=HEAD_Y (頭ヨー),  7=HEAD_P (頭ピッチ),  8=HEAD_R (頭ロール)
  *
  * Safe servo ranges:
  *   HEAD_Y  : -700..700   (neg=left,   pos=right)
@@ -38,16 +38,19 @@ public class GestureManager {
     private static final String TAG = "Gesture";
 
     // ----------------------------------------------------------------
-    // Servo IDs
+    // Servo IDs (from official Sota axis diagram)
+    //   1=BODY_Y(腰ヨー), 2=L_SHOULDER, 3=L_ELBOW,
+    //   4=R_SHOULDER, 5=R_ELBOW,
+    //   6=HEAD_Y(頭ヨー), 7=HEAD_P(頭ピッチ), 8=HEAD_R(頭ロール)
     // ----------------------------------------------------------------
-    private static final byte SV_HEAD_Y       = 1;
-    private static final byte SV_HEAD_P       = 2;
-    private static final byte SV_HEAD_R       = 3;
-    private static final byte SV_BODY_Y       = 4;
-    private static final byte SV_L_SHOULDER_P = 5;
-    private static final byte SV_R_SHOULDER_P = 6;
-    private static final byte SV_L_ELBOW_P    = 7;
-    private static final byte SV_R_ELBOW_P    = 8;
+    private static final byte SV_BODY_Y       = 1;
+    private static final byte SV_L_SHOULDER_P = 2;
+    private static final byte SV_L_ELBOW_P    = 3;
+    private static final byte SV_R_SHOULDER_P = 4;
+    private static final byte SV_R_ELBOW_P    = 5;
+    private static final byte SV_HEAD_Y       = 6;
+    private static final byte SV_HEAD_P       = 7;
+    private static final byte SV_HEAD_R       = 8;
 
     private static final int SPEAKING_PATTERN_COUNT = 7;
 

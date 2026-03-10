@@ -1,14 +1,17 @@
 """
-whisper_server.py — Flask HTTP server for Whisper STT + DeepFace ethnicity detection.
+whisper_server.py — Flask HTTP server for faster-whisper STT + DeepFace ethnicity detection.
 
 Endpoints:
-  GET  /health         -> {"status":"ok","model":"base","device":"cuda","deepface":true/false}
+  GET  /health         -> {"status":"ok","model":"small","device":"cuda","deepface":true/false}
   POST /transcribe     -> multipart form with 'audio' file field
                           optional form field 'language' (e.g. "ja", "en")
                           optional form field 'translate' ("true" to also get English translation)
                           returns {"ok":true,"text":"...","text_en":"...","language":"ja","processing_ms":1234}
   POST /analyze_face   -> multipart form with 'image' file field (JPEG)
                           returns {"ok":true,"dominant_race":"asian","confidence":87,"all_races":{...}}
+
+Uses faster-whisper (CTranslate2) instead of openai-whisper for 4-8x faster inference.
+Install: pip install faster-whisper
 
 Models are loaded once at startup (not per-request).
 Listens on 0.0.0.0:5050 so Sota can reach it over WiFi.
@@ -28,8 +31,7 @@ if sys.platform == "win32":
         line_buffering=True, write_through=True
     )
 
-import whisper
-import torch
+from faster_whisper import WhisperModel
 import flask
 import tempfile
 import os
@@ -48,21 +50,25 @@ except ImportError:
     print("[Server] Install with: pip install deepface tf-keras")
 
 # --- Configuration ---
-WHISPER_MODEL = "base"   # Change to "small" for better accuracy
+WHISPER_MODEL = "small"
 PORT = 5050
-SERVER_BUILD = "2026-03-01-utf8fix-v3"
+SERVER_BUILD = "2026-03-09-faster-whisper-v1"
 
 # --- Load model at startup ---
-print("[Whisper Server] Loading model '{}'...".format(WHISPER_MODEL))
+print("[Whisper Server] Loading faster-whisper model '{}'...".format(WHISPER_MODEL))
 print("[Whisper Server] Build: {}".format(SERVER_BUILD))
+
+# faster-whisper uses CTranslate2: auto selects cuda if available
+import torch
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print("[Whisper Server] Device: {}".format(device))
+compute_type = "float16" if device == "cuda" else "int8"
+print("[Whisper Server] Device: {} (compute_type: {})".format(device, compute_type))
 if device == "cpu":
     print("[Whisper Server] WARNING: Running on CPU! Transcription will be slow.")
     print("[Whisper Server] Check CUDA installation if you have an NVIDIA GPU.")
 
-model = whisper.load_model(WHISPER_MODEL, device=device)
-print("[Whisper Server] Model ready!")
+model = WhisperModel(WHISPER_MODEL, device=device, compute_type=compute_type)
+print("[Whisper Server] Model ready! (faster-whisper with CTranslate2)")
 print("[Whisper Server] Starting on port {}...".format(PORT))
 
 app = flask.Flask(__name__)
@@ -138,23 +144,23 @@ def transcribe():
 
         t0 = time.time()
 
-        # Step 1: Transcribe (original language)
+        # Step 1: Transcribe (original language) using faster-whisper
+        transcribe_kwargs = {"beam_size": 5}
         if language:
-            result = model.transcribe(tmp_path, language=language, verbose=False)
-        else:
-            result = model.transcribe(tmp_path, verbose=False)
+            transcribe_kwargs["language"] = language
 
-        text = result.get("text", "").strip()
-        lang = result.get("language", "")
+        segments, info = model.transcribe(tmp_path, **transcribe_kwargs)
+        text = " ".join(seg.text.strip() for seg in segments).strip()
+        lang = info.language or ""
 
         # Step 2: Translate to English (if requested and not already English)
         text_en = text  # default: same as original
         if do_translate and lang and lang != "en":
             try:
-                result_en = model.transcribe(tmp_path, task="translate", verbose=False)
-                text_en = result_en.get("text", "").strip()
+                translate_kwargs = {"beam_size": 5, "task": "translate"}
+                seg_en, _ = model.transcribe(tmp_path, **translate_kwargs)
+                text_en = " ".join(seg.text.strip() for seg in seg_en).strip()
             except Exception as translate_err:
-                # Keep request successful even if translation step fails.
                 print("[Whisper Server] WARN: translate failed: {}".format(repr(translate_err)))
                 text_en = text
 

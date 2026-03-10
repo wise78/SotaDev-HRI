@@ -1,0 +1,74 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P11
+Group       : G1
+Session     : 2
+Condition   : REMEMBER (REMEMBER (Memory active, with reciprocity))
+Reciprocity : WR
+Start Time  : 2026-03-10 18:09:33
+============================================================
+
+[18:09:33] Turn 1 - ROBOT
+  Response : Hello Cholid, my friend from Indonesia! I remember you! Welcome back! Last time we talked about some interesting things! How are you?
+
+[18:10:03] Turn 2 - USER (lang=en)
+  Original : I'm fine thank you, what about you Shota?
+
+[18:10:04] Turn 3 - ROBOT
+  Response : I'm doing well, Cholid! I've been running some updates and fine-tuning my language skills. It's great to catch up with you again! How was your week, did anything exciting happen?
+
+[18:10:36] Turn 4 - USER (lang=id)
+  Original : nggak ada yang spesial hari ini
+  English  : There is no special today.
+
+[18:10:37] Turn 5 - ROBOT
+  Response : Sometimes just having a quiet day can be nice, though. Did you get a chance to relax and unwind at all this week, or was it a bit busy?
+
+[18:11:08] Turn 6 - USER (lang=ms)
+  Original : Hari ini cibuk soalnya akan lagi melesakkan tukas-tukas pulihah.
+  English  : Today, I'm busy because my husband is going to change his clothes.
+
+[18:11:09] Turn 7 - ROBOT
+  Response : It sounds like you have a pretty good system going at home, with your husband helping out with household chores! Does he take his job of changing clothes pretty seriously?
+
+[18:11:47] Turn 8 - USER (lang=id)
+  Original : Kamu hidup dia, sama apa? Wish apa? Jawab aja sama apa, Pak? Halo? Ya, Rambat Pang Kebas Kulai lagi berat tadi ini sekarang.
+  English  : What's wrong with him? Who are you talking to? Just answer, it's okay. Hello? Yes, I'm on my way to school. It's too heavy.
+
+[18:11:48] Turn 9 - ROBOT
+  Response : I'm so sorry, Cholid! I think I got a bit ahead of myself. I know you're on your way to school, and I'll try to get back on track. How's the backpack feeling, is it manageable for the rest of your day?
+
+[18:12:32] Turn 10 - USER (lang=id)
+  Original : Masih gana jebel, jadi apai tupan, yasa cangat yang spesial untuk hari-hari, kemarin.
+  English  : It's still the same, right? So, that's it. Usually, there is no special for today. Yesterday.
+
+[18:12:33] Turn 11 - ROBOT
+  Response : It sounds like it's been a bit of a slog carrying that backpack, and you're just trying to make it to school without any extra stress. What's been the most challenging part about dealing with the weight of your backpack lately?
+
+[18:13:23] Turn 12 - USER (lang=id)
+  Original : Yang paling bisa itu, karena bawa live-up di perspeknya yang jadi berat.
+  English  : Please follow me The best thing is to put the laptop in the perfect position so it's heavy
+
+[18:13:24] Turn 13 - ROBOT
+  Response : It sounds like you've found a silver lining in getting the laptop to make the backpack slightly more manageable. Do you have a favorite way of setting up your laptop for school, or is it more of a "makes do" situation?
+
+[18:13:55] Turn 14 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[18:14:32] Turn 15 - USER (lang=en)
+  Original : Okay, good bye, good bye Sota. Good bye.
+
+[18:14:33] Turn 16 - ROBOT
+  Response : It was great talking to you, Cholid! See you next time!
+
+
+============================================================
+End Time    : 2026-03-10 18:14:51
+Duration    : 318s
+Total Turns : 16
+User Turns  : 7
+Robot Turns : 9
+Peak VAD    : 10497
+Goodbye     : Robot/timeout
+============================================================

@@ -1,0 +1,13 @@
+participant_id,group,session,Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9,Q10,Q11,Q12,Q13,Q14,Q15,Q16,Q17,Q18,Q19,Q20,Q21,Q22,Q23,age,gender,nationality,robot_experience,ai_familiarity,seen_sota_before
+P01,G1,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Indonesian,,,
+P01,G1,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+P02,G2,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Indonesian,,,
+P02,G2,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+P03,G1,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Indonesian,,,
+P04,G2,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Indonesian,,,
+P05,G1,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Filipino,,,
+P06,G2,1,,,,,,,,,,,,,,,,,,,,,,,,,Female,Caribbean,,,
+P06,G2,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+P07,G1,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Indonesian,,,
+P08,G2,1,,,,,,,,,,,,,,,,,,,,,,,,,Male,Nepali,,,
+P09,G1,1,,,,,,,,,,,,,,,,,,,,,,,,,Female,Vietnamese,,,

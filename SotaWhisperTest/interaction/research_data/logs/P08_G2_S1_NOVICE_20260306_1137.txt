@@ -1,0 +1,62 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P08
+Group       : G2
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-06 11:37:00
+============================================================
+
+[11:37:12] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Europe or America?
+
+[11:37:20] Turn 2 - ROBOT
+  Response : What's your name?
+
+[11:37:28] Turn 3 - USER (lang=en)
+  Original : Hello Sota, I am Rupak from Nepal.
+
+[11:37:33] Turn 4 - ROBOT
+  Response : Nice to meet you, Rupak! Where are you from?
+
+[11:37:41] Turn 5 - USER (lang=en)
+  Original : I am from Nepal. How are you doing today?
+
+[11:37:45] Turn 6 - ROBOT
+  Response : Oh, Nepal. How are you doing today! That's wonderful! What do you enjoy most about Nepal. How are you doing today?
+
+[11:38:05] Turn 7 - USER (lang=en)
+  Original : I enjoy walking on the street.
+
+[11:38:18] Turn 8 - ROBOT
+  Response : That's a great way to explore and get some exercise, Rupak! Taking a stroll on the street can be very refreshing, especially in the mountains where nature is so beautiful and abundant in Nepal. Do you have a favorite place or route that you like to walk in?
+
+[11:38:40] Turn 9 - USER (lang=en)
+  Original : so we can walk in some mountain our hilly regions
+
+[11:38:44] Turn 10 - ROBOT
+  Response : The Himalayas and the hilly regions of Nepal are truly breathtaking, with their lush green forests, sparkling waterfalls, and majestic mountains. It's wonderful that you enjoy walking in those areas, Rupak. Have you ever tried trekking to any of the famous destinations, such as Everest Base Camp or the Annapurna Circuit?
+
+[11:39:15] Turn 11 - USER (lang=en)
+  Original : Yeah, it's very interesting to work on those mountains. So I am in Japan for couple of months. Can you suggest me some places where I can visit?
+
+[11:39:20] Turn 12 - ROBOT
+  Response : Japan is a fascinating country, Rupak! I'd be happy to help you with some suggestions. Have you considered visiting the Fushimi Inari Shrine in Kyoto, famous for its thousands of vermilion torii gates, or the beautiful gardens and temples of the Kiyomizu-dera Temple in Kyoto as well?
+
+[11:39:50] Turn 13 - USER (lang=en)
+  Original : Okay, thank you for your time. Bye-bye.
+
+[11:39:55] Turn 14 - ROBOT
+  Response : It was great talking to you, Rupak! See you next time!
+
+============================================================
+End Time    : 2026-03-06 11:40:00
+Duration    : 180s
+Total Turns : 14
+User Turns  : 5
+Robot Turns : 9
+Peak VAD    : 3821
+Goodbye     : User
+============================================================

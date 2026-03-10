@@ -1,0 +1,94 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P13
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-10 15:46:51
+============================================================
+
+[15:47:00] Turn 1 - ROBOT
+  Response : What's your name?
+
+[15:47:12] Turn 2 - ROBOT
+  Response : Nice to meet you, Pudi! Where are you from?
+
+[15:47:27] Turn 3 - ROBOT
+  Response : Oh, Chicago! That's wonderful! What do you enjoy most about Chicago?
+
+[15:47:40] Turn 4 - USER (lang=en)
+  Original : Yeah
+
+[15:47:41] Turn 5 - ROBOT
+  Response : Hello Pudi! So, what brings you here today? Are you looking forward to trying some Chicago-style hot dogs or deep dish pizza while we chat?
+
+[15:48:14] Turn 6 - USER (lang=en)
+  Original : I like the hot dogs, I like the hot dogs.
+
+[15:48:14] Turn 7 - ROBOT
+  Response : Hot dogs are a classic Chicago favorite. Do you have a favorite way of topping your hot dog, Pudi - like relish, onions, or sport peppers?
+
+[15:48:44] Turn 8 - USER (lang=en)
+  Original : I like hot dog with a lot of onions.
+
+[15:48:46] Turn 9 - ROBOT
+  Response : Onions add a nice crunch and flavor to a hot dog. I can imagine you enjoying a loaded hot dog at a stadium or ballpark on a summer day, just like at a Cubs game.
+
+[15:49:21] Turn 10 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[15:49:41] Turn 11 - USER (lang=id)
+  Original : Oh bisa. Bersendiru bisa. Kepayang kamu tahu tentang Indonesia.
+  English  : Yes, you can. I want you to know about Indonesia.
+
+[15:49:43] Turn 12 - ROBOT
+  Response : I'd love to learn more about Indonesia, Pudi. Is there something in particular you'd like to share about the culture, food, or daily life in Indonesia that you think I might find interesting?
+
+[15:50:19] Turn 13 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[15:50:36] Turn 14 - USER (lang=id)
+  Original : Apa gunung yang paling bagus di Indonesia?
+  English  : What is the best mountain in Indonesia?
+
+[15:50:37] Turn 15 - ROBOT
+  Response : Sumatra's Gunung Leuser is considered one of the most biodiverse mountains in Indonesia, and is even home to the Sumatran tiger. Have you had a chance to visit Gunung Leuser or experience its natural beauty firsthand?
+
+[15:51:12] Turn 16 - USER (lang=id)
+  Original : Bagaimana dengan kunung yang di jawa?
+  English  : Where is the town that is in Java?
+
+[15:51:14] Turn 17 - ROBOT
+  Response : You're probably thinking of Borobudur, a UNESCO World Heritage site in central Java. It's famous for its beautiful temples and stunning views.
+
+[15:51:33] Turn 18 - USER (lang=en)
+  Original : Thank you so much.
+
+[15:51:35] Turn 19 - ROBOT
+  Response : You're welcome, Pudi! I'm glad I could help. What do you like to do in your free time?
+
+[15:51:58] Turn 20 - USER (lang=pt)
+  Original : Até a próxima!
+  English  : Good bye Ok, good bye Sota
+
+[15:52:00] Turn 21 - ROBOT
+  Response : It was great talking to you, Pudi! See you next time!
+
+[15:52:12] Turn 22 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+[15:52:20] Turn 23 - ROBOT
+  Response : What's your name?
+
+
+============================================================
+End Time    : 2026-03-10 15:52:21
+Duration    : 330s
+Total Turns : 23
+User Turns  : 8
+Robot Turns : 15
+Peak VAD    : 12356
+Goodbye     : Robot/timeout
+============================================================

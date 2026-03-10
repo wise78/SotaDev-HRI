@@ -939,119 +939,125 @@ class ResearchGUI:
         if not self.polling:
             return
 
-        self.conn_indicator.config(text=" CONNECTED ", bg="#2e7d32")
+        try:
+            self.conn_indicator.config(text=" CONNECTED ", bg="#2e7d32")
 
-        # State
-        state = data.get("state", "?")
-        colors = STATE_COLORS.get(state, ("#607D8B", "white"))
-        label = STATE_LABELS.get(state, state.upper())
-        self.state_label.config(text="  " + label + "  ", bg=colors[0], fg=colors[1])
+            # State
+            state = data.get("state", "?")
+            colors = STATE_COLORS.get(state, ("#607D8B", "white"))
+            label = STATE_LABELS.get(state, state.upper())
+            self.state_label.config(text="  " + label + "  ", bg=colors[0], fg=colors[1])
 
-        if state != self.prev_state and self.prev_state:
-            self._log("State: {} -> {}".format(self.prev_state.upper(), state.upper()))
-            if self.session_active:
-                self._append_conv_log("system", "[State: {}]".format(label))
-        self.prev_state = state
+            if state != self.prev_state and self.prev_state:
+                self._log("State: {} -> {}".format(self.prev_state.upper(), state.upper()))
+                if self.session_active:
+                    self._append_conv_log("system", "[State: {}]".format(label))
+            self.prev_state = state
 
-        # Turn / Silence
-        turn = data.get("turn", 0)
-        max_turns = data.get("maxTurns", 0)
-        if max_turns > 0:
-            self.turn_var.set("{}/{}".format(turn, max_turns))
-        else:
-            self.turn_var.set(str(turn))
-        self.silence_var.set(str(data.get("silenceRetries", 0)))
-
-        # VAD
-        vad_working = data.get("vadWorking", False)
-        vad_level = data.get("vadLevel", -1)
-        is_recording = data.get("isRecording", False)
-        is_speech = data.get("isSpeech", False)
-        rec_dur = data.get("recordingDurationMs", 0)
-
-        if vad_working:
-            self.vad_var.set("OK")
-            self.vad_label.config(fg="#2e7d32")
-        else:
-            self.vad_var.set("N/A")
-            self.vad_label.config(fg="#9E9E9E")
-
-        if is_recording:
-            self.rec_var.set("{:.1f}s".format(rec_dur / 1000.0))
-            self.rec_label.config(fg="#c62828")
-        else:
-            self.rec_var.set("--")
-            self.rec_label.config(fg="#607D8B")
-
-        # Level bar
-        self._draw_level_bar(vad_level, is_speech, vad_working)
-        self.level_text_var.set(str(vad_level) if vad_level >= 0 else "--")
-
-        if vad_level > 0 and self.session_active:
-            self.logger.update_vad(vad_level)
-
-        # Conversation snapshot
-        user_text = data.get("lastUserText", "") or ""
-        user_en = data.get("lastUserTextEn", "") or ""
-        sota_text = data.get("lastSotaText", "") or ""
-        lang = data.get("lastDetectedLang", "") or ""
-
-        self.conv_vars["user"].set(user_text if user_text else "-")
-        self.conv_vars["english"].set(user_en if user_en else "-")
-        self.conv_vars["robot"].set(sota_text if sota_text else "-")
-
-        # Detect new conversation turns for logging
-        if self.session_active:
-            if user_text and user_text != self._last_user_text:
-                self._last_user_text = user_text
-                self._append_conv_log("user", user_text)
-                if user_en and user_en != user_text:
-                    self._append_conv_log("system", "  (EN: {})".format(user_en))
-                self.logger.log_turn("USER", user_text, lang, user_en)
-
-            if sota_text and sota_text != self._last_sota_text:
-                self._last_sota_text = sota_text
-                self._append_conv_log("robot", sota_text)
-                self.logger.log_turn("ROBOT", sota_text)
-
-            # Detect goodbye
-            if state == "closing":
-                lower = user_text.lower() if user_text else ""
-                user_bye = any(w in lower for w in
-                               ["bye", "goodbye", "see you", "sayonara",
-                                "mata ne", "sampai jumpa"])
-                self.logger.mark_goodbye(user_bye)
-
-        # Language indicator from robot
-        base_lang = data.get("baseLanguage", "en") or "en"
-        if base_lang != self.lang_var.get():
-            self.lang_var.set(base_lang)
-            if base_lang == "ja":
-                self.lang_label.config(text=" JAPANESE ", bg="#C62828")
+            # Turn / Silence
+            turn = data.get("turn", 0)
+            max_turns = data.get("maxTurns", 0)
+            if max_turns > 0:
+                self.turn_var.set("{}/{}".format(turn, max_turns))
             else:
-                self.lang_label.config(text=" ENGLISH ", bg="#1565C0")
+                self.turn_var.set(str(turn))
+            self.silence_var.set(str(data.get("silenceRetries", 0)))
 
-        # Update subtitle window
-        if self.subtitle_window is not None:
-            try:
-                self.subtitle_window.update_display(state, sota_text, user_text)
-            except tk.TclError:
-                # Window was closed
-                self.subtitle_window = None
+            # VAD
+            vad_working = data.get("vadWorking", False)
+            vad_level = data.get("vadLevel", -1)
+            is_recording = data.get("isRecording", False)
+            is_speech = data.get("isSpeech", False)
+            rec_dur = data.get("recordingDurationMs", 0)
 
-        # User profile
-        name = data.get("userName", "") or ""
-        origin = data.get("userOrigin", "") or ""
-        social = data.get("userSocialLevel", "") or ""
-        interactions = data.get("userInteractions", 0)
-        if name:
-            self.profile_var.set("{} | {} | {} | {} interactions".format(
-                name, origin if origin else "?", social.upper() if social else "?",
-                interactions))
-        else:
-            self.profile_var.set("-")
+            if vad_working:
+                self.vad_var.set("OK")
+                self.vad_label.config(fg="#2e7d32")
+            else:
+                self.vad_var.set("N/A")
+                self.vad_label.config(fg="#9E9E9E")
 
-        # Next poll
+            if is_recording:
+                self.rec_var.set("{:.1f}s".format(rec_dur / 1000.0))
+                self.rec_label.config(fg="#c62828")
+            else:
+                self.rec_var.set("--")
+                self.rec_label.config(fg="#607D8B")
+
+            # Level bar
+            self._draw_level_bar(vad_level, is_speech, vad_working)
+            self.level_text_var.set(str(vad_level) if vad_level >= 0 else "--")
+
+            if vad_level > 0 and self.session_active:
+                self.logger.update_vad(vad_level)
+
+            # Conversation snapshot
+            user_text = data.get("lastUserText", "") or ""
+            user_en = data.get("lastUserTextEn", "") or ""
+            sota_text = data.get("lastSotaText", "") or ""
+            lang = data.get("lastDetectedLang", "") or ""
+
+            self.conv_vars["user"].set(user_text if user_text else "-")
+            self.conv_vars["english"].set(user_en if user_en else "-")
+            self.conv_vars["robot"].set(sota_text if sota_text else "-")
+
+            # Detect new conversation turns for logging
+            if self.session_active:
+                try:
+                    if user_text and user_text != self._last_user_text:
+                        self._last_user_text = user_text
+                        self._append_conv_log("user", user_text)
+                        if user_en and user_en != user_text:
+                            self._append_conv_log("system", "  (EN: {})".format(user_en))
+                        self.logger.log_turn("USER", user_text, lang, user_en)
+
+                    if sota_text and sota_text != self._last_sota_text:
+                        self._last_sota_text = sota_text
+                        self._append_conv_log("robot", sota_text)
+                        self.logger.log_turn("ROBOT", sota_text)
+
+                    # Detect goodbye
+                    if state == "closing":
+                        lower = user_text.lower() if user_text else ""
+                        user_bye = any(w in lower for w in
+                                       ["bye", "goodbye", "see you", "sayonara",
+                                        "mata ne", "sampai jumpa"])
+                        self.logger.mark_goodbye(user_bye)
+                except Exception as log_err:
+                    self._log("WARN: Log error: {}".format(log_err))
+
+            # Language indicator from robot
+            base_lang = data.get("baseLanguage", "en") or "en"
+            if base_lang != self.lang_var.get():
+                self.lang_var.set(base_lang)
+                if base_lang == "ja":
+                    self.lang_label.config(text=" JAPANESE ", bg="#C62828")
+                else:
+                    self.lang_label.config(text=" ENGLISH ", bg="#1565C0")
+
+            # Update subtitle window
+            if self.subtitle_window is not None:
+                try:
+                    self.subtitle_window.update_display(state, sota_text, user_text)
+                except Exception:
+                    self.subtitle_window = None
+
+            # User profile
+            name = data.get("userName", "") or ""
+            origin = data.get("userOrigin", "") or ""
+            social = data.get("userSocialLevel", "") or ""
+            interactions = data.get("userInteractions", 0)
+            if name:
+                self.profile_var.set("{} | {} | {} | {} interactions".format(
+                    name, origin if origin else "?", social.upper() if social else "?",
+                    interactions))
+            else:
+                self.profile_var.set("-")
+
+        except Exception as e:
+            self._log("WARN: UI update error: {}".format(e))
+
+        # ALWAYS schedule next poll — even if update_ui had errors
         self.root.after(self.poll_interval, self._poll)
 
     # ================================================================

@@ -1,0 +1,65 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P10
+Group       : G2
+Session     : 2
+Condition   : NO-REMEMBER (NO-REMEMBER (No memory, no reciprocity (control)))
+Reciprocity : WOR
+Start Time  : 2026-03-09 19:33:41
+============================================================
+
+[19:33:41] Turn 1 - ROBOT
+  Response : Hey! You look familiar... you're the one from Indonesia, right? Sorry, what's your name again?
+
+[19:34:02] Turn 2 - ROBOT
+  Response : Oh, thank you, it's Arinja! Nice to meet you! So, what's life like in Indonesia?
+
+[19:34:27] Turn 3 - USER (lang=id)
+  Original : Biasa aja sih, orang-orang yang nuselin lagi perabok-bok.
+  English  : Just be normal, people who complain, I'm trying to get rid of it.
+
+[19:34:28] Turn 4 - ROBOT
+  Response : It can be really challenging to deal with negative thoughts and emotions. Have you found any activities or routines that help you relax and shift your focus away from complaining?
+
+[19:35:10] Turn 5 - USER (lang=id)
+  Original : Aaaa, paling apa ya? Saya, hmmm, orang-orang yang sering.
+  English  : What is the most important thing in this game?
+
+[19:35:11] Turn 6 - ROBOT
+  Response : In most games, the most important thing can vary depending on the game's objectives and mechanics. However, in general, success often depends on strategy, teamwork, and adapting to changing circumstances. What type of game are you playing, Arinja, and what are your goals in it?
+
+[19:35:58] Turn 7 - USER (lang=id)
+  Original : kalau game yang gue main ini tuh mubak, tapi kalau buat goals gue jadi imo
+  English  : If I play this game, it's cool, but if my goal is to be imo
+
+[19:36:00] Turn 8 - ROBOT
+  Response : It sounds like you're enjoying the gameplay itself, but maybe not as much if you're not winning or achieving your goal, which is to be the "imo" - I think you mean "imo" as in "imo" is a slang term for "I'm out", meaning you're giving up, but I'm assuming you're saying you want to be the winner. Is there anything that
+
+[19:36:55] Turn 9 - USER (lang=id)
+  Original : imoto imortal kaya render tinggi gitu bukan mau buat tal
+  English  : imo is immortal, like a high rank, it's not for me
+
+[19:36:56] Turn 10 - ROBOT
+  Response : You're looking for a challenge that's not too easy or overwhelming, so you can still have fun and improve, but not get too frustrated or stuck. What kind of activities or hobbies do you usually enjoy doing in your free time, Arinja?
+
+[19:37:37] Turn 11 - USER (lang=id)
+  Original : Apakah SOTA itu kepanjangannya SOTA? Sudah, sudah, sudah. Good bye.
+  English  : Is SOTA that long SOTA? Okay, okay, good bye.
+
+[19:37:38] Turn 12 - ROBOT
+  Response : It was great talking to you, Oh, thank you, it's Arinja! See you next time!
+
+[19:37:54] Turn 13 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you!
+
+
+============================================================
+End Time    : 2026-03-09 19:37:56
+Duration    : 255s
+Total Turns : 13
+User Turns  : 5
+Robot Turns : 8
+Peak VAD    : 8785
+Goodbye     : Robot/timeout
+============================================================
