@@ -281,8 +281,6 @@ Session 1 serves as the **baseline**. All participants have the same first encou
 | Q# | Question | Purpose |
 |----|----------|---------|
 | Q29 | Age (years) | Control variable — younger people may be more comfortable with tech |
-| Q30 | Gender (Male / Female / Non-binary / Prefer not to say) | Standard demographic reporting |
-| Q31 | Prior experience with robots (None / Several times / Regular / Expert) | **Confounding variable** — robot experience affects expectations and comfort |
 | Q32 | Familiarity with AI/robotics (Not at all / Somewhat / Very familiar) | **Confounding variable** — tech-savvy people may react differently |
 | Q33 | "Have you seen Sota before this study?" (Yes / No) | **Manipulation check** — if Yes, the NOVICE condition is compromised |
 

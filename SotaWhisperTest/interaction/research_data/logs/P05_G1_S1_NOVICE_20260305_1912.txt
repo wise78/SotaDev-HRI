@@ -1,0 +1,50 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P05
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-05 19:12:51
+============================================================
+
+[19:13:10] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Asia?
+
+[19:13:21] Turn 2 - ROBOT
+  Response : What's your name?
+
+[19:13:30] Turn 3 - ROBOT
+  Response : Nice to meet you, Insurance prospect배ination π! Where are you from?
+
+[19:13:49] Turn 4 - ROBOT
+  Response : Oh, Philippines! That's wonderful! What do you enjoy most about Philippines?
+
+[19:14:13] Turn 5 - USER (lang=en)
+  Original : And I most about Philippines. I don't know, I usually just stay at home.
+
+[19:14:14] Turn 6 - ROBOT
+  Response : It's great that you value your home time, and staying in can be a great way to relax, right? Do you have any favorite TV shows or movies that you like to watch while staying at home, or any hobbies that you enjoy?
+
+[19:14:40] Turn 7 - ROBOT
+  Response : It was great talking to you, Insurance prospect배ination π! See you next time!
+
+[19:14:58] Turn 8 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Asia?
+
+[19:15:08] Turn 9 - ROBOT
+  Response : What's your name?
+
+[19:15:20] Turn 10 - ROBOT
+  Response : Nice to meet you, we! Where are you from?
+
+[19:15:45] Turn 11 - ROBOT
+  Response : I can't hear you. Could you say that again?
+
+[19:16:09] Turn 12 - USER (lang=en)
+  Original : research I want to compare between session one and session two because yeah what I measure is yeah I can say it because I say it will be by yes you will know what I hear
+
+[19:16:10] Turn 13 - ROBOT
+  Response : It sounds like you're exploring a way to measure understanding through verbalization, where you express what you've learned and see if the listener (me!) can follow along. What sparked your interest in this approach, and how do you think it might differ between sessions one and two?
+

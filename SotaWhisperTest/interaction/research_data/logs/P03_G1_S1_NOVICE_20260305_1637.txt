@@ -1,0 +1,45 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P03
+Group       : G1
+Session     : 1
+Condition   : NOVICE (NOVICE (First meeting, no memory, no reciprocity))
+Reciprocity : WOR
+Start Time  : 2026-03-05 16:37:07
+============================================================
+
+[16:37:30] Turn 1 - ROBOT
+  Response : Hello! I'm Sota, a friendly robot. Nice to meet you! Are you from Asia?
+
+[16:37:40] Turn 2 - ROBOT
+  Response : What's your name?
+
+[16:37:50] Turn 3 - ROBOT
+  Response : Nice to meet you, exploitation! Where are you from?
+
+[16:38:06] Turn 4 - ROBOT
+  Response : Oh, 스파이초! That's wonderful! What do you enjoy most about 스파이초?
+
+[16:38:31] Turn 5 - USER (lang=en)
+  Original : In Indonesia we have many beautiful scenery, we have many cultures, we have many languages and most I like about Indonesia is...
+
+[16:38:43] Turn 6 - ROBOT
+  Response : It sounds like Indonesia is truly a treasure trove of diversity and natural beauty, Exploitation! What is it about the rich cultural heritage, vibrant landscapes, or perhaps the warm hospitality of the Indonesian people that draws you in?
+
+[16:39:26] Turn 7 - USER (lang=en)
+  Original : I mean, if you see, YANG, if you see, GOLAG, if you see BATIC, it's going to have a distinct features.
+
+[16:39:27] Turn 8 - ROBOT
+  Response : I think I understand what you're trying to say, Exploitation! You're referencing the traditional Indonesian clothing, like the Yang (a type of headdress), Golag (a traditional scarf), and Batik (a traditional fabric), which are all iconic and beautiful in their own ways. Is it the intricate patterns or symbolic meanings behind these traditional garments that fascinate you?
+
+
+============================================================
+End Time    : 2026-03-05 16:44:25
+Duration    : 439s
+Total Turns : 8
+User Turns  : 2
+Robot Turns : 6
+Peak VAD    : 3735
+Goodbye     : Robot/timeout
+============================================================

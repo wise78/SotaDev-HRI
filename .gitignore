@@ -22,6 +22,8 @@ __pycache__/
 
 # Runtime output directories (created automatically during experiments)
 logs/
+!**/research_data/logs/
+!**/research_data/questionnaire/
 voice/
 videos/
 questionnaires/

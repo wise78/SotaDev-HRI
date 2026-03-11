@@ -1,0 +1,111 @@
+============================================================
+HRI Experiment Session Log
+============================================================
+Participant : P03
+Group       : G1
+Session     : 2
+Condition   : REMEMBER (REMEMBER (Memory active, with reciprocity))
+Reciprocity : WR
+Start Time  : 2026-03-06 15:31:56
+============================================================
+
+[15:32:24] Turn 1 - ROBOT
+  Response : Hello Rudy Ong, my friend from Indonesia! I remember you! Welcome back! Last time we talked about some interesting things! How are you?
+
+[15:32:53] Turn 2 - USER (lang=en)
+  Original : I'm fine, thank you, how about you?
+
+[15:32:58] Turn 3 - ROBOT
+  Response : I'm functioning within optimal parameters, thank you for asking, Rudy! How have you been enjoying your free time lately?
+
+[15:33:33] Turn 4 - USER (lang=id)
+  Original : Ya, terakhir saya di Indonesia untuk menghormati tahun baru-nama China. Saya sangat gembira memiliki peluang untuk menghormati keluarga saya. Sangat bagus.
+  English  : Yeah, last week I am in Indonesia to celebrate Chinese New Year. I am very happy to have an opportunity to celebrate with my family. It's nice.
+
+[15:33:36] Turn 5 - ROBOT
+  Response : That sounds like a wonderful experience, Rudy! I'm glad you got to spend quality time with your family during Chinese New Year. Did you try any traditional Indonesian dishes during your visit, or did you indulge in more festive Chinese cuisine?
+
+[15:34:30] Turn 6 - USER (lang=ms)
+  Original : Ya, saya lebih berlianat dalam kelas kini. Kami boleh katakan Cip Cai, dan kelas muntang, kelas nasi tarik dan sebagainya. Ia sangat sedap. Tapi, anda perlu berhati-hati untuk tidak makan terlalu banyak.
+  English  : Yes, I am more indulged in Chinese dishes. You can say chop chai and then moon cake, nasta cake and so on and so on. It's very delicious but you need to be careful not to eat too much.
+
+[15:34:35] Turn 7 - ROBOT
+  Response : You have a good memory for Chinese treats, Rudy! It's great that you enjoyed the flavors, but yes, it's easy to overindulge in those sweet and savory goodies. Did you have a favorite dish or dessert among the many you tried during your visit?
+
+[15:35:29] Turn 8 - USER (lang=id)
+  Original : Makanan saya favorit untuk tahun baru ini. Ia harusnya adalah kek. Tapi di Indonesia, keknya dibuat dari Dodol. Ia sedap untuk beberapa orang, tapi untuk saya, ini berhasil.
+  English  : My favorite food for Chinese New Year, it should be mooncake, but in Indonesia the mooncake is made from dodol. It's sweet for some people, but for me it's tasty.
+
+[15:35:35] Turn 9 - ROBOT
+  Response : That's fascinating, Rudy! Using dodol as a substitute for traditional mooncake fillings is a creative twist. I can see why it would be tasty for you. Do you think you might adopt this Indonesian variation of mooncake into your own celebrations when you're back in your usual location?
+
+
+============================================================
+End Time    : 2026-03-06 16:17:05
+Duration    : 2709s
+Total Turns : 9
+User Turns  : 4
+Robot Turns : 5
+Peak VAD    : 4434
+Goodbye     : Robot/timeout
+============================================================
+ Japan. But the ingredients are a bit hard to find, so sometimes I use substitute ingredients. But the taste is still good.
+
+[15:36:17] Turn 11 - ROBOT
+  Response : That's very resourceful of you, Rudy! Making traditional food in a foreign country shows real dedication to your culture. I remember last time you mentioned you enjoy Indonesian food and culture. It seems like food really connects you to home! Do you cook other Indonesian dishes here in Japan too?
+
+[15:36:58] Turn 12 - USER (lang=id)
+  Original : Ya, saya suka masak nasi goreng dan rendang. Nasi goreng itu mudah, tapi rendang butuh waktu lama. Saya biasanya masak rendang kalau ada teman-teman Indonesia datang ke rumah.
+  English  : Yes, I like to cook fried rice and rendang. Fried rice is easy, but rendang takes a long time. I usually cook rendang when Indonesian friends come to my house.
+
+[15:37:03] Turn 13 - ROBOT
+  Response : Nasi goreng and rendang, what a combination! Rendang is famous worldwide, Rudy. It's great that you cook for your friends. That sounds like a wonderful way to bring people together. Speaking of friends, do you have a big Indonesian community here?
+
+[15:37:45] Turn 14 - USER (lang=id)
+  Original : Ya, ada beberapa teman Indonesia di kampus. Kami kadang-kadang berkumpul untuk makan bersama atau main game. Seperti yang saya bilang terakhir kali, saya suka main game dan nonton anime.
+  English  : Yes, there are some Indonesian friends on campus. We sometimes gather to eat together or play games. Like I said last time, I like playing games and watching anime.
+
+[15:37:50] Turn 15 - ROBOT
+  Response : That's right, Rudy! I remember you enjoy games and anime! It must be amazing to be in Japan as an anime fan. Have you visited any anime-related places like Akihabara or any anime cafes since we last talked?
+
+[15:38:30] Turn 16 - USER (lang=en)
+  Original : Actually yes, I went to Akihabara last weekend with my friends. We visited some shops and I bought some manga. It was very fun. Japan is really the best place for anime fans.
+
+[15:38:35] Turn 17 - ROBOT
+  Response : That sounds like an awesome trip, Rudy! Akihabara is truly a paradise for anime and manga lovers. Did you find any rare manga or something special that caught your eye during your visit?
+
+[15:39:15] Turn 18 - USER (lang=id)
+  Original : Saya beli manga One Piece edisi terbaru dan juga beberapa figurin kecil. Harganya agak mahal tapi kualitasnya sangat bagus. Saya juga coba makan di kafe maid. Pengalamannya unik sekali.
+  English  : I bought the latest One Piece manga edition and also some small figurines. The price is a bit expensive but the quality is very good. I also tried eating at a maid cafe. The experience was really unique.
+
+[15:39:20] Turn 19 - ROBOT
+  Response : One Piece and a maid cafe experience, that's the full Akihabara package! I'm glad you're making the most of your time in Japan, Rudy. Between Indonesian cooking, anime adventures, and campus life, you seem to be having a great time. What are you looking forward to next?
+
+[15:40:02] Turn 20 - USER (lang=id)
+  Original : Hmm, sebenarnya bulan depan ada festival musim semi di kampus. Saya mau ikut karena ada pertunjukan budaya. Mungkin saya bisa menampilkan sesuatu tentang budaya Indonesia.
+  English  : Hmm, actually next month there is a spring festival on campus. I want to join because there is a cultural performance. Maybe I can present something about Indonesian culture.
+
+[15:40:07] Turn 21 - ROBOT
+  Response : That's a wonderful idea, Rudy! Showcasing Indonesian culture at a spring festival would be amazing. You could do a cooking demonstration with nasi goreng, or maybe show some traditional Indonesian art. I think people would love to learn about your culture!
+
+[15:40:48] Turn 22 - USER (lang=id)
+  Original : Ya, itu ide bagus. Mungkin saya bisa demo masak atau pakai baju tradisional. Terima kasih Sota, kamu selalu punya ide yang bagus. Saya senang ngobrol dengan kamu lagi.
+  English  : Yes, that's a good idea. Maybe I can do a cooking demo or wear traditional clothes. Thank you Sota, you always have good ideas. I'm happy to chat with you again.
+
+[15:40:53] Turn 23 - ROBOT
+  Response : Thank you so much, Rudy! I'm always happy to chat with you too. It means a lot that you enjoy our conversations. I'll remember everything we talked about today. Good luck with the spring festival!
+
+[15:41:22] Turn 24 - USER (lang=en)
+  Original : Thank you Sota. I have to go now. See you next time. Bye bye.
+
+[15:41:27] Turn 25 - ROBOT
+  Response : Goodbye Rudy! It was so nice seeing you again, my friend from Indonesia! I'll be here whenever you want to chat. Take care and enjoy your rendang! See you soon!
+
+============================================================
+End Time    : 2026-03-06 15:41:27
+Duration    : 569 seconds
+Total Turns : 25
+User Turns  : 12
+Robot Turns : 13
+============================================================
+
